@@ -1,12 +1,20 @@
 import React, { useCallback } from 'react';
-import { AppBar, Toolbar, IconButton, Tooltip } from '@mui/material';
-import { Add as NewIcon, FolderOpen as OpenIcon, Save as SaveIcon, 
-         Undo as UndoIcon, Redo as RedoIcon } from '@mui/icons-material';
-import useGraphStore from '../store/graphStore';
+import { AppBar, Toolbar, IconButton, Tooltip, Button, CircularProgress } from '@mui/material';
+import { 
+  Add as NewIcon, 
+  FolderOpen as OpenIcon, 
+  Save as SaveIcon, 
+  Undo as UndoIcon, 
+  Redo as RedoIcon,
+  PlayArrow as PlayIcon
+} from '@mui/icons-material';
+import { useGraphStore } from '../store/graphStore';
+import { useExecutionStore } from '../store/executionStore';
 
 export const NavigationBar: React.FC = () => {
   const { undo, redo, clear } = useGraphStore();
   const history = useGraphStore.getState().history;
+  const { runMockExecution, isExecuting } = useExecutionStore();
 
   const hasPast = history?.past?.length > 0;
   const hasFuture = history?.future?.length > 0;
@@ -66,28 +74,44 @@ export const NavigationBar: React.FC = () => {
     URL.revokeObjectURL(url);
   }, []);
 
+  const handleRun = useCallback(() => {
+    runMockExecution();
+  }, [runMockExecution]);
+
   return (
     <AppBar position="static" color="default" elevation={1}>
       <Toolbar variant="dense">
         <Tooltip title="New Graph">
-          <IconButton onClick={handleNew} aria-label="new">
+          <IconButton onClick={handleNew} aria-label="new" size="medium">
             <NewIcon />
           </IconButton>
         </Tooltip>
         
         <Tooltip title="Open Graph">
-          <IconButton onClick={handleOpen} aria-label="open">
+          <IconButton onClick={handleOpen} aria-label="open" size="medium">
             <OpenIcon />
           </IconButton>
         </Tooltip>
         
         <Tooltip title="Save Graph">
-          <IconButton onClick={handleSave} aria-label="save">
+          <IconButton onClick={handleSave} aria-label="save" size="medium">
             <SaveIcon />
           </IconButton>
         </Tooltip>
         
         <div style={{ flexGrow: 1 }} />
+
+        <Button
+          color="primary"
+          variant="contained"
+          startIcon={isExecuting ? <CircularProgress size={18} color="inherit" /> : <PlayIcon />}
+          onClick={handleRun}
+          disabled={isExecuting}
+          size="small"
+          sx={{ mr: 2 }}
+        >
+          {isExecuting ? 'Running...' : 'Run'}
+        </Button>
         
         <Tooltip title="Undo">
           <span>
@@ -95,6 +119,7 @@ export const NavigationBar: React.FC = () => {
               onClick={undo} 
               disabled={!hasPast} 
               aria-label="undo"
+              size="medium"
             >
               <UndoIcon />
             </IconButton>
@@ -107,6 +132,7 @@ export const NavigationBar: React.FC = () => {
               onClick={redo} 
               disabled={!hasFuture} 
               aria-label="redo"
+              size="medium"
             >
               <RedoIcon />
             </IconButton>

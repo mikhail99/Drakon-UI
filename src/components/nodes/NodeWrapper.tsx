@@ -1,108 +1,134 @@
-import React, { memo } from 'react';
-import { Position, NodeProps } from 'reactflow';
+import React from 'react';
 import { styled } from '@mui/material/styles';
-import { Card, CardContent, Typography, Tooltip } from '@mui/material';
+import { 
+  Card, 
+  CardHeader, 
+  CardContent, 
+  Typography, 
+  Box,
+  Tooltip,
+  CircularProgress
+} from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import { NodeProps } from 'reactflow';
 import { NodeData } from '../../types/node';
-import BaseNode, { PortComponent } from './BaseNode';
+import BaseNode from './BaseNode';
+import { useExecutionStore, NodeExecutionStatus } from '../../store/executionStore';
 
+// Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
-  minWidth: 150,
-  maxWidth: 280,
   borderRadius: theme.shape.borderRadius,
+  minWidth: 160,
+  width: '100%',
+  height: '100%',
   boxShadow: theme.shadows[2],
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: theme.shadows[4],
+  }
 }));
 
-const Header = styled('div')(({ theme }) => ({
+// Create a status property for the styled component
+interface CardHeaderProps {
+  status?: NodeExecutionStatus;
+}
+
+const StyledCardHeader = styled(CardHeader)<CardHeaderProps>(({ theme, status }) => ({
   padding: theme.spacing(1),
-  paddingBottom: theme.spacing(0.5),
+  paddingLeft: theme.spacing(1.5),
+  paddingRight: theme.spacing(1.5),
   borderBottom: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  borderTopLeftRadius: theme.shape.borderRadius,
-  borderTopRightRadius: theme.shape.borderRadius,
-  display: 'flex',
-  alignItems: 'center',
+  backgroundColor: 
+    status === 'success' ? theme.palette.success.light :
+    status === 'error' ? theme.palette.error.light :
+    status === 'running' ? theme.palette.info.light :
+    theme.palette.background.default,
+  transition: 'background-color 0.3s ease',
 }));
 
-const NodeIcon = styled('div')({
-  marginRight: 8,
-  display: 'flex',
-  alignItems: 'center',
-});
-
-const NodeTitle = styled(Typography)({
-  fontWeight: 'bold',
-  fontSize: '0.9rem',
-  flexGrow: 1,
-});
-
-const StyledContent = styled(CardContent)(({ theme }) => ({
-  padding: theme.spacing(1, 1.5),
-  '&:last-child': {
-    paddingBottom: theme.spacing(1),
-  },
+const PortLabel = styled(Typography)(({ theme }) => ({
+  fontSize: '0.7rem',
+  color: theme.palette.text.secondary,
+  marginBottom: 2,
 }));
 
-const PortRow = styled('div')({
-  display: 'flex',
-  alignItems: 'center',
-  position: 'relative',
-  height: 28,
-  marginBottom: 4,
-});
-
-const PortLabel = styled(Typography)({
-  fontSize: '0.875rem',
-  paddingLeft: 8,
-  paddingRight: 8,
-});
-
-interface NodeWrapperProps extends NodeProps<NodeData> {}
-
-const NodeWrapper: React.FC<NodeWrapperProps> = (props) => {
-  const { data } = props;
-
-  // Get an icon for the node based on its type
-  const getNodeIcon = () => {
-    // You could add icons here based on node type
-    // For now, just return null or a placeholder
-    return null;
+const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ data, ...props }) => {
+  const { results } = useExecutionStore();
+  const nodeResult = results[props.id];
+  const executionStatus = nodeResult?.status || 'idle';
+  
+  // Render node status icon
+  const renderStatusIcon = () => {
+    switch (executionStatus) {
+      case 'running':
+        return <CircularProgress size={16} />;
+      case 'success':
+        return <CheckCircleIcon fontSize="small" color="success" />;
+      case 'error':
+        return <ErrorIcon fontSize="small" color="error" />;
+      default:
+        return null;
+    }
   };
-  
-  // Render the card content
+
+  // Render the card content (input/output ports)
   const renderCardContent = () => (
-    <StyledCard>
-      <Header>
-        <NodeIcon>{getNodeIcon()}</NodeIcon>
-        <NodeTitle variant="h6">{data.label}</NodeTitle>
-      </Header>
-      <StyledContent>
-        {/* Input ports */}
-        {data.inputs?.map((input) => (
-          <Tooltip key={input.id} title={input.description || input.type} placement="left">
-            <PortRow>
-              <PortLabel>{input.label}</PortLabel>
-            </PortRow>
-          </Tooltip>
-        ))}
-        
-        {/* Output ports */}
-        {data.outputs?.map((output) => (
-          <Tooltip key={output.id} title={output.description || output.type} placement="right">
-            <PortRow style={{ justifyContent: 'flex-end' }}>
-              <PortLabel>{output.label}</PortLabel>
-            </PortRow>
-          </Tooltip>
-        ))}
-      </StyledContent>
-    </StyledCard>
+    <CardContent sx={{ p: 1, pb: '8px !important', height: 'calc(100% - 40px)' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', height: '100%' }}>
+        {/* Input ports column */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', mr: 1, minWidth: '35%' }}>
+          {data.inputs?.map(port => (
+            <Tooltip key={port.id} title={port.description || port.label} placement="left">
+              <Box sx={{ mb: 1 }}>
+                <PortLabel variant="caption">
+                  {port.label}
+                </PortLabel>
+              </Box>
+            </Tooltip>
+          ))}
+        </Box>
+
+        {/* Output ports column */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '35%' }}>
+          {data.outputs?.map(port => (
+            <Tooltip key={port.id} title={port.description || port.label} placement="right">
+              <Box sx={{ mb: 1 }}>
+                <PortLabel variant="caption">
+                  {port.label}
+                </PortLabel>
+              </Box>
+            </Tooltip>
+          ))}
+        </Box>
+      </Box>
+    </CardContent>
   );
-  
+
   return (
-    <BaseNode {...props} renderHandles={true}>
-      {renderCardContent()}
+    <BaseNode
+      {...props}
+      data={data}
+      className={`node-${executionStatus}`}
+      renderHandles={true}
+    >
+      <StyledCard variant="outlined">
+        <StyledCardHeader 
+          status={executionStatus}
+          title={
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="subtitle2" sx={{ fontSize: '0.875rem' }}>
+                {data.label || 'Node'}
+              </Typography>
+              {renderStatusIcon()}
+            </Box>
+          }
+          disableTypography
+        />
+        {renderCardContent()}
+      </StyledCard>
     </BaseNode>
   );
 };
 
-export default memo(NodeWrapper); 
+export default NodeWrapper; 

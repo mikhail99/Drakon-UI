@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodePalette from '../palette/NodePalette';
-import NodeConfiguration from '../configuration/NodeConfiguration';
+import ResultsPanel from '../results/ResultsPanel';
 import GraphErrorBoundary from '../error/GraphErrorBoundary';
 import GraphCanvas from './components/GraphCanvas';
 import GraphContextMenuHandler from './components/GraphContextMenuHandler';
@@ -51,8 +51,8 @@ const GraphEditorInner: React.FC = () => {
       
       <GraphCanvas onContextMenu={handleContextMenu} />
       
-      <GraphErrorBoundary componentName="Node Configuration">
-        <NodeConfiguration />
+      <GraphErrorBoundary componentName="Results Panel">
+        <ResultsPanel />
       </GraphErrorBoundary>
       
       {/* Template Selection Dialog */}
