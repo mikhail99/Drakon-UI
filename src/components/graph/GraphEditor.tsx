@@ -14,6 +14,7 @@ import ReactFlow, {
   MiniMap,
   MarkerType,
   Connection,
+  ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { styled } from '@mui/material/styles';
@@ -62,7 +63,26 @@ const edgeTypes: EdgeTypes = {
 };
 
 // Connection validation function
-const isValidConnection = () => {
+const isValidConnection = (connection: Connection) => {
+  // Prevent connecting to the same node
+  if (connection.source === connection.target) {
+    return false;
+  }
+  
+  // Prevent duplicate connections
+  const { edges } = useGraphStore.getState();
+  const isDuplicate = edges.some(
+    edge => 
+      edge.source === connection.source && 
+      edge.sourceHandle === connection.sourceHandle &&
+      edge.target === connection.target &&
+      edge.targetHandle === connection.targetHandle
+  );
+  
+  if (isDuplicate) {
+    return false;
+  }
+  
   return true;
 };
 
@@ -264,6 +284,11 @@ const GraphEditorInner = () => {
   // Handle connection creation with custom edge properties
   const handleConnect = useCallback(
     (params: Connection) => {
+      if (!params.source || !params.target) {
+        console.error('Invalid connection parameters:', params);
+        return;
+      }
+      
       // Get source node and port details
       const sourceNode = nodes.find((n: Node<NodeData>) => n.id === params.source);
       const sourcePort = sourceNode?.data.outputs?.find((p: PortDefinition) => p.id === params.sourceHandle);
@@ -271,6 +296,11 @@ const GraphEditorInner = () => {
       // Get target node and port details
       const targetNode = nodes.find((n: Node<NodeData>) => n.id === params.target);
       const targetPort = targetNode?.data.inputs?.find((p: PortDefinition) => p.id === params.targetHandle);
+      
+      if (!sourceNode || !targetNode) {
+        console.error('Could not find source or target node for connection:', params);
+        return;
+      }
       
       // Create label from port names
       const sourceName = sourcePort?.label || 'output';
@@ -280,6 +310,7 @@ const GraphEditorInner = () => {
       // Enhance the connection with custom data and style
       const enhancedConnection = {
         ...params,
+        id: `e${params.source}-${params.sourceHandle}-${params.target}-${params.targetHandle}`,
         type: 'default', // Use our custom edge type
         animated: false, // Set to true for animated edges if needed
         markerEnd: { type: MarkerType.ArrowClosed, color: '#555' },
@@ -290,6 +321,7 @@ const GraphEditorInner = () => {
         },
       };
       
+      console.log('Creating connection:', enhancedConnection);
       onConnect(enhancedConnection);
     },
     [nodes, onConnect]
@@ -367,7 +399,12 @@ const GraphEditorInner = () => {
             type: 'default',
             markerEnd: { type: MarkerType.ArrowClosed },
           }}
+          connectionLineStyle={{ stroke: '#555' }}
+          connectionLineType={ConnectionLineType.Bezier}
           isValidConnection={isValidConnection}
+          deleteKeyCode={['Backspace', 'Delete']}
+          multiSelectionKeyCode={['Control', 'Meta']}
+          selectionKeyCode={['Shift']}
           fitView
           snapToGrid
           snapGrid={[15, 15]}

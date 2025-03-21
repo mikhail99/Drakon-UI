@@ -27,15 +27,22 @@ const LabeledEdge: FC<EdgeProps> = ({
   selected,
   style,
   markerEnd,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  label
 }) => {
   const theme = useTheme();
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX: 0,
-    sourceY: 0,
-    sourcePosition: Position.Bottom,
-    targetX: 0,
-    targetY: 0,
-    targetPosition: Position.Top,
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
     curvature: 0.25,
   });
 

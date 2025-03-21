@@ -37,6 +37,20 @@ const CategoriesContainer = styled(Box)({
   overflowY: 'auto',
 });
 
+const DraggableNode = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1),
+  margin: theme.spacing(0.5, 0),
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.background.paper,
+  cursor: 'grab',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  '&:active': {
+    cursor: 'grabbing',
+  },
+}));
+
 const NodePalette: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
@@ -63,7 +77,7 @@ const NodePalette: React.FC = () => {
   };
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: NodeType) => {
-    event.dataTransfer.setData('application/draggable-node', JSON.stringify({
+    event.dataTransfer.setData('application/drakon-node', JSON.stringify({
       type: 'node',
       nodeType
     }));
@@ -101,13 +115,13 @@ const NodePalette: React.FC = () => {
             </AccordionSummary>
             <AccordionDetails>
               {category.nodes.map((nodeType) => (
-                <Box
+                <DraggableNode
                   key={nodeType.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, nodeType)}
                 >
                   <Typography>{nodeType.label}</Typography>
-                </Box>
+                </DraggableNode>
               ))}
             </AccordionDetails>
           </Accordion>
