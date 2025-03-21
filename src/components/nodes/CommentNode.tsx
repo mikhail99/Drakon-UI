@@ -31,11 +31,16 @@ const StyledHandle = styled(Handle)(({ theme }) => ({
   background: theme.palette.primary.main,
 }));
 
-const ActionButton = styled(IconButton)(({ theme }) => ({
+const ActionButton = styled(IconButton)(() => ({
   position: 'absolute',
-  top: 2,
-  right: 2,
-  padding: 4,
+  top: 5,
+  right: 5,
+  padding: 2,
+  opacity: 0.7,
+  '&:hover': {
+    opacity: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+  }
 }));
 
 const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
@@ -55,7 +60,7 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
   };
 
   return (
-    <CommentContainer color={data.config?.color} className="comment-node">
+    <CommentContainer color={data.config?.color} data-testid="comment-node">
       <StyledHandle
         type="source"
         position={Position.Right}
@@ -79,7 +84,7 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
             autoFocus
             InputProps={{ disableUnderline: true }}
           />
-          <ActionButton onClick={handleSave} size="small">
+          <ActionButton onClick={handleSave} size="small" aria-label="Save">
             <SaveIcon fontSize="small" />
           </ActionButton>
         </>
@@ -88,7 +93,7 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
           <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {text}
           </Box>
-          <ActionButton onClick={() => setIsEditing(true)} size="small">
+          <ActionButton onClick={() => setIsEditing(true)} size="small" aria-label="Edit">
             <EditIcon fontSize="small" />
           </ActionButton>
         </>

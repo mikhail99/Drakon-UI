@@ -1,24 +1,33 @@
 import { create } from 'zustand';
 import { applyNodeChanges, applyEdgeChanges, Viewport, Node, Edge, NodeChange, EdgeChange, Connection, addEdge } from 'reactflow';
 import { CustomNode, NodeData } from '../types/node';
-import { GraphState } from '../types/graph';
+import { GraphState, GraphSnapshot, EdgeData } from '../types/graph';
+import { validateConnection } from '../utils/graphUtils';
 
 // Clipboard for copy/paste operations
 let clipboard: { nodes: CustomNode[]; edges: Edge[] } | null = null;
+
+const MAX_HISTORY_LENGTH = 50;
 
 interface GraphStore extends GraphState {
   // Node actions
   onNodesChange: (changes: NodeChange[]) => void;
   addNode: (node: CustomNode) => void;
   updateNodeConfig: (nodeId: string, config: Record<string, any>) => void;
+  removeNode: (nodeId: string) => void;
   
   // Edge actions
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   updateEdge: (edge: Edge) => void;
+  addEdge: (edge: Edge<EdgeData>) => void;
+  removeEdge: (edgeId: string) => void;
   
   // Selection actions
   setSelectedElements: (elements: { nodes: string[]; edges: string[] }) => void;
+  selectNodes: (nodeIds: string[]) => void;
+  selectEdges: (edgeIds: string[]) => void;
+  deselectAll: () => void;
   
   // History actions
   undo: () => void;
@@ -30,6 +39,9 @@ interface GraphStore extends GraphState {
   // Clipboard actions
   copySelectedElements: () => void;
   pasteElements: () => void;
+  copy: () => void;
+  paste: () => void;
+  clear: () => void;
 }
 
 const initialViewport: Viewport = {
@@ -37,6 +49,12 @@ const initialViewport: Viewport = {
   y: 0,
   zoom: 1,
 };
+
+const createSnapshot = (state: GraphState): GraphSnapshot => ({
+  nodes: state.nodes,
+  edges: state.edges,
+  selectedElements: state.selectedElements
+});
 
 const useGraphStore = create<GraphStore>((set, get) => ({
   nodes: [],
@@ -47,6 +65,7 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     past: [],
     future: [],
   },
+  clipboard: { nodes: [], edges: [] },
 
   // Node actions
   onNodesChange: (changes) => {
@@ -55,43 +74,77 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
       history: {
-        past: [...state.history.past, { nodes, edges }],
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
         future: [],
       },
     }));
   },
 
   addNode: (node) => {
-    const { nodes, edges } = get();
-    set((state) => ({
-      nodes: [...state.nodes, node],
-      history: {
-        past: [...state.history.past, { nodes, edges }],
-        future: [],
-      },
-    }));
+    set((state) => {
+      const newState = {
+        ...state,
+        nodes: [...state.nodes, node],
+        history: {
+          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+          future: []
+        }
+      };
+      return newState;
+    });
   },
 
   updateNodeConfig: (nodeId, config) => {
-    const { nodes, edges } = get();
-    set((state) => ({
-      nodes: state.nodes.map((node) => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              config: { ...node.data.config, ...config },
-            },
-          };
+    set((state) => {
+      const nodeIndex = state.nodes.findIndex((n) => n.id === nodeId);
+      if (nodeIndex === -1) return state;
+
+      const updatedNodes = [...state.nodes];
+      updatedNodes[nodeIndex] = {
+        ...updatedNodes[nodeIndex],
+        data: {
+          ...updatedNodes[nodeIndex].data,
+          config: {
+            ...updatedNodes[nodeIndex].data.config,
+            ...config
+          }
         }
-        return node;
-      }),
-      history: {
-        past: [...state.history.past, { nodes, edges }],
-        future: [],
-      },
-    }));
+      };
+
+      return {
+        ...state,
+        nodes: updatedNodes,
+        history: {
+          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+          future: []
+        }
+      };
+    });
+  },
+
+  removeNode: (nodeId) => {
+    set((state) => {
+      const newEdges = state.edges.filter(
+        (edge) => edge.source !== nodeId && edge.target !== nodeId
+      );
+
+      return {
+        ...state,
+        nodes: state.nodes.filter((node) => node.id !== nodeId),
+        edges: newEdges,
+        selectedElements: {
+          nodes: state.selectedElements.nodes.filter((id) => id !== nodeId),
+          edges: state.selectedElements.edges.filter((id) => {
+            const edge = state.edges.find((e) => e.id === id);
+            return edge && edge.source !== nodeId && edge.target !== nodeId;
+          })
+        },
+        history: {
+          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+          future: []
+        }
+      };
+    });
   },
 
   // Edge actions
@@ -100,7 +153,7 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     set((state) => ({
       edges: applyEdgeChanges(changes, state.edges),
       history: {
-        past: [...state.history.past, { nodes, edges }],
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
         future: [],
       },
     }));
@@ -112,7 +165,7 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     set((state) => ({
       edges: addEdge(connection, state.edges),
       history: {
-        past: [...state.history.past, { nodes, edges }],
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
         future: [],
       },
     }));
@@ -128,9 +181,51 @@ const useGraphStore = create<GraphStore>((set, get) => ({
         return edge;
       }),
       history: {
-        past: [...state.history.past, { nodes, edges }],
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
         future: [],
       },
+    }));
+  },
+
+  addEdge: (edge) => {
+    set((state) => {
+      const sourceNode = state.nodes.find((n) => n.id === edge.source);
+      const targetNode = state.nodes.find((n) => n.id === edge.target);
+
+      if (!sourceNode || !targetNode) return state;
+
+      const isValid = validateConnection(
+        sourceNode,
+        targetNode,
+        edge.sourceHandle || '',
+        edge.targetHandle || ''
+      );
+
+      if (!isValid) return state;
+
+      return {
+        ...state,
+        edges: [...state.edges, edge],
+        history: {
+          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+          future: []
+        }
+      };
+    });
+  },
+
+  removeEdge: (edgeId) => {
+    set((state) => ({
+      ...state,
+      edges: state.edges.filter((edge) => edge.id !== edgeId),
+      selectedElements: {
+        ...state.selectedElements,
+        edges: state.selectedElements.edges.filter((id) => id !== edgeId)
+      },
+      history: {
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+        future: []
+      }
     }));
   },
 
@@ -141,43 +236,75 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     }));
   },
 
-  // History actions
-  undo: () => {
-    const { history } = get();
-    if (history.past.length === 0) return;
-
-    const newPast = [...history.past];
-    const lastState = newPast.pop();
-
-    if (!lastState) return;
-
+  selectNodes: (nodeIds) => {
     set((state) => ({
-      nodes: lastState.nodes,
-      edges: lastState.edges,
-      history: {
-        past: newPast,
-        future: [{ nodes: state.nodes, edges: state.edges }, ...state.history.future],
-      },
+      ...state,
+      selectedElements: {
+        ...state.selectedElements,
+        nodes: nodeIds
+      }
     }));
   },
 
-  redo: () => {
-    const { history } = get();
-    if (history.future.length === 0) return;
-
-    const newFuture = [...history.future];
-    const nextState = newFuture.shift();
-
-    if (!nextState) return;
-
+  selectEdges: (edgeIds) => {
     set((state) => ({
-      nodes: nextState.nodes,
-      edges: nextState.edges,
-      history: {
-        past: [...state.history.past, { nodes: state.nodes, edges: state.edges }],
-        future: newFuture,
-      },
+      ...state,
+      selectedElements: {
+        ...state.selectedElements,
+        edges: edgeIds
+      }
     }));
+  },
+
+  deselectAll: () => {
+    set((state) => ({
+      ...state,
+      selectedElements: {
+        nodes: [],
+        edges: []
+      }
+    }));
+  },
+
+  // History actions
+  undo: () => {
+    set((state) => {
+      if (state.history.past.length === 0) return state;
+
+      const previous = state.history.past[state.history.past.length - 1];
+      const newPast = state.history.past.slice(0, -1);
+
+      return {
+        ...state,
+        nodes: previous.nodes,
+        edges: previous.edges,
+        selectedElements: previous.selectedElements,
+        history: {
+          past: newPast,
+          future: [createSnapshot(state), ...state.history.future]
+        }
+      };
+    });
+  },
+
+  redo: () => {
+    set((state) => {
+      if (state.history.future.length === 0) return state;
+
+      const next = state.history.future[0];
+      const newFuture = state.history.future.slice(1);
+
+      return {
+        ...state,
+        nodes: next.nodes,
+        edges: next.edges,
+        selectedElements: next.selectedElements,
+        history: {
+          past: [...state.history.past, createSnapshot(state)],
+          future: newFuture
+        }
+      };
+    });
   },
 
   // Viewport actions
@@ -251,11 +378,86 @@ const useGraphStore = create<GraphStore>((set, get) => ({
       nodes: [...state.nodes, ...newNodes],
       edges: [...state.edges, ...newEdges],
       history: {
-        past: [...state.history.past, { nodes, edges }],
-        future: [],
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+        future: []
       },
     }));
   },
+
+  copy: () => {
+    set((state) => {
+      const selectedNodes = state.nodes.filter((node) =>
+        state.selectedElements.nodes.includes(node.id)
+      );
+
+      const selectedEdges = state.edges.filter(
+        (edge) =>
+          state.selectedElements.edges.includes(edge.id) &&
+          state.selectedElements.nodes.includes(edge.source) &&
+          state.selectedElements.nodes.includes(edge.target)
+      );
+
+      return {
+        ...state,
+        clipboard: {
+          nodes: selectedNodes.map((node) => ({
+            ...node,
+            id: `${node.id}-copy`
+          })),
+          edges: selectedEdges.map((edge) => ({
+            ...edge,
+            id: `${edge.id}-copy`,
+            source: `${edge.source}-copy`,
+            target: `${edge.target}-copy`
+          }))
+        }
+      };
+    });
+  },
+
+  paste: () => {
+    set((state) => {
+      if (state.clipboard.nodes.length === 0) return state;
+
+      const offsetX = 50;
+      const offsetY = 50;
+
+      const newNodes = state.clipboard.nodes.map((node) => ({
+        ...node,
+        position: {
+          x: node.position.x + offsetX,
+          y: node.position.y + offsetY
+        }
+      }));
+
+      const newEdges = state.clipboard.edges.map((edge) => ({
+        ...edge,
+        id: `${edge.id}-${Date.now()}`
+      }));
+
+      return {
+        ...state,
+        nodes: [...state.nodes, ...newNodes],
+        edges: [...state.edges, ...newEdges],
+        history: {
+          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+          future: []
+        }
+      };
+    });
+  },
+
+  clear: () => {
+    set((state) => ({
+      ...state,
+      nodes: [],
+      edges: [],
+      selectedElements: { nodes: [], edges: [] },
+      history: { past: [], future: [] },
+      viewport: { x: 0, y: 0, zoom: 1 },
+      clipboard: { nodes: [], edges: [] }
+    }));
+  }
 }));
 
 export default useGraphStore; 
