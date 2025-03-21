@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Position, NodeProps } from 'reactflow';
 import { styled } from '@mui/material/styles';
 import { Card, CardContent, Typography, Tooltip } from '@mui/material';
-import { NodeData, PortDefinition } from '../../types/node';
+import { NodeData } from '../../types/node';
+import BaseNode, { PortComponent } from './BaseNode';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   minWidth: 150,
@@ -39,70 +40,19 @@ const PortsContainer = styled('div')({
   gap: '8px',
 });
 
-const Port = styled('div')({
-  position: 'relative',
-  height: 20,
-  display: 'flex',
-  alignItems: 'center',
-});
-
-const InputPort = styled(Port)({
-  marginLeft: 12,
-  justifyContent: 'flex-start',
-});
-
-const OutputPort = styled(Port)({
-  marginRight: 12,
-  justifyContent: 'flex-end',
-});
-
 const PortLabel = styled(Typography)({
   fontSize: '0.75rem',
   marginLeft: 8,
   marginRight: 8,
 });
 
-// Colors for different port types
-const portTypeColors = {
-  number: '#1976d2',
-  string: '#388e3c',
-  boolean: '#d32f2f',
-  array: '#7b1fa2',
-  object: '#ff9800',
-};
-
-interface PortComponentProps {
-  definition: PortDefinition;
-  position: Position;
-}
-
-const PortComponent: React.FC<PortComponentProps> = ({ definition, position }) => {
-  const isInput = position === Position.Left;
-  const PortContainer = isInput ? InputPort : OutputPort;
-  
-  return (
-    <Tooltip title={definition.description || definition.type} placement={isInput ? 'right' : 'left'}>
-      <PortContainer>
-        <Handle
-          type={isInput ? 'target' : 'source'}
-          position={position}
-          id={definition.id}
-          style={{
-            background: portTypeColors[definition.type] || '#ccc',
-            width: 10,
-            height: 10,
-          }}
-        />
-        <PortLabel>{definition.label}</PortLabel>
-      </PortContainer>
-    </Tooltip>
-  );
-};
-
 interface NodeWrapperProps extends NodeProps<NodeData> {}
 
-const NodeWrapper: React.FC<NodeWrapperProps> = ({ data }) => {
-  return (
+const NodeWrapper: React.FC<NodeWrapperProps> = (props) => {
+  const { data } = props;
+  
+  // We'll handle rendering the card content here, and let BaseNode handle the ports/handles
+  const renderCardContent = () => (
     <StyledCard>
       <Header>
         <NodeTitle variant="h6">{data.label}</NodeTitle>
@@ -110,16 +60,32 @@ const NodeWrapper: React.FC<NodeWrapperProps> = ({ data }) => {
       <StyledContent>
         <PortsContainer>
           {data.inputs.map((input) => (
-            <PortComponent key={input.id} definition={input} position={Position.Left} />
+            <Tooltip key={input.id} title={input.description || input.type} placement="right">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: 10, height: 10 }} /> {/* Placeholder for handle */}
+                <PortLabel>{input.label}</PortLabel>
+              </div>
+            </Tooltip>
           ))}
         </PortsContainer>
         <PortsContainer>
           {data.outputs.map((output) => (
-            <PortComponent key={output.id} definition={output} position={Position.Right} />
+            <Tooltip key={output.id} title={output.description || output.type} placement="left">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <PortLabel>{output.label}</PortLabel>
+                <div style={{ width: 10, height: 10 }} /> {/* Placeholder for handle */}
+              </div>
+            </Tooltip>
           ))}
         </PortsContainer>
       </StyledContent>
     </StyledCard>
+  );
+  
+  return (
+    <BaseNode {...props} renderHandles={true}>
+      {renderCardContent()}
+    </BaseNode>
   );
 };
 

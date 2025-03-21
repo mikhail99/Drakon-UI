@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { NodeProps, Handle, Position } from 'reactflow';
+import { NodeProps, Position } from 'reactflow';
 import { styled } from '@mui/material/styles';
 import { Paper, TextField, IconButton, Box } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import { useGraphStore } from '../../store/graphStore';
 import { NodeData } from '../../types/node';
+import BaseNode, { PortComponent, PortComponentProps } from './BaseNode';
 
 const CommentContainer = styled(Paper, {
   shouldForwardProp: (prop) => prop !== 'color',
@@ -25,12 +26,6 @@ const CommentContainer = styled(Paper, {
   position: 'relative',
 }));
 
-const StyledHandle = styled(Handle)(({ theme }) => ({
-  width: 8,
-  height: 8,
-  background: theme.palette.primary.main,
-}));
-
 const ActionButton = styled(IconButton)(() => ({
   position: 'absolute',
   top: 5,
@@ -43,7 +38,8 @@ const ActionButton = styled(IconButton)(() => ({
   }
 }));
 
-const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
+const CommentNode: React.FC<NodeProps<NodeData>> = (props) => {
+  const { id, data } = props;
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(data.config?.text || 'Add comment here...');
   const { updateNodeConfig } = useGraphStore();
@@ -70,23 +66,29 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
     setIsEditing(true);
   };
 
-  return (
+  // Define custom handles for the comment node
+  const customPortProps: PortComponentProps[] = [
+    {
+      definition: { id: 'source', label: '', type: 'string' },
+      position: Position.Right,
+      handleType: 'source',
+      handleColor: '#555'
+    },
+    {
+      definition: { id: 'target', label: '', type: 'string' },
+      position: Position.Left,
+      handleType: 'target',
+      handleColor: '#555'
+    }
+  ];
+
+  // Render the comment content
+  const renderCommentContent = () => (
     <CommentContainer 
       color={data.config?.backgroundColor} 
       data-testid="comment-node"
       onDoubleClick={handleDoubleClick}
     >
-      <StyledHandle
-        type="source"
-        position={Position.Right}
-        id="source"
-      />
-      <StyledHandle
-        type="target"
-        position={Position.Left}
-        id="target"
-      />
-      
       {isEditing ? (
         <>
           <TextField
@@ -115,6 +117,19 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
         </>
       )}
     </CommentContainer>
+  );
+
+  return (
+    <BaseNode {...props} renderHandles={false} className="comment-node">
+      {/* Manually add the handles */}
+      {customPortProps.map((portProps, index) => (
+        <PortComponent
+          key={`port-${index}`}
+          {...portProps}
+        />
+      ))}
+      {renderCommentContent()}
+    </BaseNode>
   );
 };
 
