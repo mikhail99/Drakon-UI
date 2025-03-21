@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
+import 'reactflow/dist/style.css'; // Ensure styles are imported
 import { styled } from '@mui/material/styles';
 
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -23,6 +24,7 @@ const GraphContainer = styled('div')({
  * Wraps the main graph components and manages their interactions
  */
 const GraphEditorInner: React.FC = () => {
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
   // Use keyboard shortcuts and get template dialog state
   const { showTemplateDialog, setShowTemplateDialog } = useKeyboardShortcuts();
   
@@ -33,6 +35,12 @@ const GraphEditorInner: React.FC = () => {
   const handleContextMenu = (event: React.MouseEvent) => {
     // Prevent default browser context menu
     event.preventDefault();
+    // Set context menu position
+    setContextMenu(
+      contextMenu === null
+        ? { mouseX: event.clientX, mouseY: event.clientY }
+        : null,
+    );
   };
   
   // Handle template selection
@@ -43,17 +51,10 @@ const GraphEditorInner: React.FC = () => {
 
   return (
     <GraphContainer data-testid="graph-container">
-      <GraphErrorBoundary componentName="Node Palette">
-        <NodePalette />
-      </GraphErrorBoundary>
-      
+      <NodePalette />
       <GraphContextMenuHandler onContextMenu={handleContextMenu} />
-      
       <GraphCanvas onContextMenu={handleContextMenu} />
-      
-      <GraphErrorBoundary componentName="Results Panel">
-        <ResultsPanel />
-      </GraphErrorBoundary>
+      <ResultsPanel />
       
       {/* Template Selection Dialog */}
       <TemplateSelectionDialog

@@ -100,10 +100,17 @@ const NodePalette: React.FC = () => {
   };
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: NodeType) => {
-    event.dataTransfer.setData('application/drakon-node', JSON.stringify({
+    // Set basic text data first (for better compatibility)
+    event.dataTransfer.setData('text/plain', nodeType.label);
+    
+    // Set custom data format with stringified node type information
+    const data = {
       type: 'node',
       nodeType
-    }));
+    };
+    
+    event.dataTransfer.setData('application/drakon-node', JSON.stringify(data));
+    event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
