@@ -4,7 +4,7 @@ import { Node, Edge, XYPosition } from 'reactflow';
 // These would be imported from the actual types in the real implementation
 interface NodeData {
   label: string;
-  nodeType: string;
+  type: string;
   inputs: Array<PortData>;
   outputs: Array<PortData>;
   config: Record<string, any>;
@@ -34,7 +34,7 @@ export const createMockNode = (overrides = {}): Node<NodeData> => ({
   position: { x: 100, y: 100 },
   data: {
     label: 'Test Node',
-    nodeType: 'default',
+    type: 'default',
     inputs: [],
     outputs: [],
     config: {},
@@ -68,15 +68,14 @@ export const generateNodes = (count: number): Node<NodeData>[] =>
   Array.from({ length: count }, (_, i) => 
     createMockNode({
       id: `node-${i}`,
-      position: { x: (i % 5) * 200, y: Math.floor(i / 5) * 200 },
-      data: { 
+      position: { x: i * 200, y: 100 },
+      data: {
         label: `Node ${i}`,
-        nodeType: i % 2 === 0 ? 'math' : 'input',
-        inputs: i % 2 === 0 ? [createMockPort({ id: `in-${i}`, label: `Input ${i}` })] : [],
-        outputs: [createMockPort({ id: `out-${i}`, label: `Output ${i}` })],
+        type: i % 2 === 0 ? 'math' : 'input',
+        inputs: i > 0 ? [createMockPort({ id: `input-${i}` })] : [],
+        outputs: i < count - 1 ? [createMockPort({ id: `output-${i}` })] : []
       }
-    })
-  );
+    }));
   
 // Generate connected edges between nodes
 export const generateEdges = (nodeCount: number): Edge<EdgeData>[] => 

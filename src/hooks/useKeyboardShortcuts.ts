@@ -1,102 +1,61 @@
 import { useEffect } from 'react';
 import useGraphStore from '../store/graphStore';
+import { Node } from 'reactflow';
+import { NodeData } from '../types/node';
 
-type KeyboardShortcut = {
-  key: string;
-  ctrlKey?: boolean;
-  shiftKey?: boolean;
-  altKey?: boolean;
-  action: () => void;
-};
+export function useKeyboardShortcuts() {
+  const { undo, redo, copy, paste, deselectAll } = useGraphStore();
 
-export const useKeyboardShortcuts = (shortcuts: KeyboardShortcut[]) => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
-      ) {
+      // Ignore events from input elements
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      for (const shortcut of shortcuts) {
-        if (
-          event.key.toLowerCase() === shortcut.key.toLowerCase() &&
-          !!event.ctrlKey === !!shortcut.ctrlKey &&
-          !!event.shiftKey === !!shortcut.shiftKey &&
-          !!event.altKey === !!shortcut.altKey
-        ) {
-          event.preventDefault();
-          shortcut.action();
-          break;
+      // Handle keyboard shortcuts
+      if (event.ctrlKey) {
+        switch (event.key.toLowerCase()) {
+          case 'z':
+            event.preventDefault();
+            undo();
+            break;
+          case 'y':
+            event.preventDefault();
+            redo();
+            break;
+          case 'c':
+            event.preventDefault();
+            copy();
+            break;
+          case 'v':
+            event.preventDefault();
+            paste();
+            break;
+          case 'a':
+            event.preventDefault();
+            // Select all nodes
+            const nodes = useGraphStore.getState().nodes;
+            useGraphStore.getState().selectNodes(nodes.map((node: Node<NodeData>) => node.id));
+            break;
+          case 'escape':
+            event.preventDefault();
+            deselectAll();
+            break;
         }
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        // Delete selected nodes
+        const selectedNodes = useGraphStore.getState().selectedElements.nodes;
+        selectedNodes.forEach((nodeId: string) => {
+          useGraphStore.getState().removeNode(nodeId);
+        });
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [shortcuts]);
-};
-
-export const useCommonKeyboardShortcuts = () => {
-  const { undo, redo, copySelectedElements, pasteElements } = useGraphStore();
-
-  const shortcuts: KeyboardShortcut[] = [
-    {
-      key: 'z',
-      ctrlKey: true,
-      action: undo,
-    },
-    {
-      key: 'y',
-      ctrlKey: true,
-      action: redo,
-    },
-    {
-      key: 'z',
-      ctrlKey: true,
-      shiftKey: true,
-      action: redo,
-    },
-    {
-      key: 'c',
-      ctrlKey: true,
-      action: copySelectedElements,
-    },
-    {
-      key: 'v',
-      ctrlKey: true,
-      action: pasteElements,
-    },
-    {
-      key: 'Delete',
-      action: () => {
-        const { nodes, edges, selectedElements, onNodesChange, onEdgesChange } = useGraphStore.getState();
-        
-        // Delete selected nodes
-        if (selectedElements.nodes.length > 0) {
-          const nodeChanges = selectedElements.nodes.map(id => ({
-            id,
-            type: 'remove' as const,
-          }));
-          onNodesChange(nodeChanges);
-        }
-        
-        // Delete selected edges
-        if (selectedElements.edges.length > 0) {
-          const edgeChanges = selectedElements.edges.map(id => ({
-            id,
-            type: 'remove' as const,
-          }));
-          onEdgesChange(edgeChanges);
-        }
-      },
-    },
-  ];
-
-  useKeyboardShortcuts(shortcuts);
-}; 
+  }, [undo, redo, copy, paste, deselectAll]);
+} 
