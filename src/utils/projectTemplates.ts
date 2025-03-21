@@ -58,10 +58,25 @@ export const projectTemplates: ProjectTemplate[] = [
   },
   {
     id: 'all',
-    name: 'Full Toolkit',
-    description: 'Template with all available node types',
+    name: 'Hakken!',
+    description: '発見! Your intelligent research assistant with advanced search, analysis, and thinking capabilities',
     icon: 'AutoAwesome',
-    nodeTypes: Object.keys(allNodeTypes)
+    nodeTypes: [
+      // Search operations
+      'search.byName',
+      'search.byId',
+      'search.bySimilarity',
+      // Analyze operations
+      'analyze.references',
+      'analyze.citations',
+      'analyze.topics',
+      // Think operations
+      'think.mindMap',
+      'think.brainstorm',
+      // I/O operations (needed for inputs/outputs)
+      'io.input',
+      'io.output'
+    ]
   },
   {
     id: 'sql',

@@ -5,11 +5,11 @@ import { styled } from '@mui/material/styles';
 
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodePalette from '../palette/NodePalette';
-import ResultsPanel from '../results/ResultsPanel';
 import GraphErrorBoundary from '../error/GraphErrorBoundary';
 import GraphCanvas from './components/GraphCanvas';
 import GraphContextMenuHandler from './components/GraphContextMenuHandler';
 import TemplateSelectionDialog from '../dialogs/TemplateSelectionDialog';
+import NodeConfigurationDialog from '../configuration/NodeConfigurationDialog';
 import { useTemplateStore } from '../../store/templateStore';
 
 // Main container for the graph editor
@@ -19,12 +19,21 @@ const GraphContainer = styled('div')({
   display: 'flex',
 });
 
+// Container for the canvas area
+const CanvasContainer = styled('div')({
+  flex: 1,
+  position: 'relative',
+  display: 'flex',
+});
+
 /**
  * GraphEditorInner - Internal component that composes the graph editor
  * Wraps the main graph components and manages their interactions
  */
 const GraphEditorInner: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [configNodeId, setConfigNodeId] = useState<string | null>(null);
+
   // Use keyboard shortcuts and get template dialog state
   const { showTemplateDialog, setShowTemplateDialog } = useKeyboardShortcuts();
   
@@ -43,24 +52,48 @@ const GraphEditorInner: React.FC = () => {
     );
   };
   
+  // Handle node double-click to open configuration
+  const handleNodeDoubleClick = (nodeId: string) => {
+    setConfigNodeId(nodeId);
+  };
+  
   // Handle template selection
   const handleSelectTemplate = (templateId: string) => {
     setActiveTemplate(templateId);
     setShowTemplateDialog(false);
   };
 
+  // Close the configuration dialog
+  const handleCloseConfigDialog = () => {
+    setConfigNodeId(null);
+  };
+
   return (
     <GraphContainer data-testid="graph-container">
       <NodePalette />
-      <GraphContextMenuHandler onContextMenu={handleContextMenu} />
-      <GraphCanvas onContextMenu={handleContextMenu} />
-      <ResultsPanel />
+      <CanvasContainer>
+        <GraphErrorBoundary>
+          <GraphContextMenuHandler onContextMenu={handleContextMenu}>
+            <GraphCanvas 
+              onContextMenu={handleContextMenu} 
+              onNodeDoubleClick={handleNodeDoubleClick}
+            />
+          </GraphContextMenuHandler>
+        </GraphErrorBoundary>
+      </CanvasContainer>
       
       {/* Template Selection Dialog */}
       <TemplateSelectionDialog
         open={showTemplateDialog}
         onClose={() => setShowTemplateDialog(false)}
         onSelectTemplate={handleSelectTemplate}
+      />
+      
+      {/* Node Configuration Dialog */}
+      <NodeConfigurationDialog
+        open={configNodeId !== null}
+        nodeId={configNodeId}
+        onClose={handleCloseConfigDialog}
       />
     </GraphContainer>
   );

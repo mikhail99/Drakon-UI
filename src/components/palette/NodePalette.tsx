@@ -100,6 +100,8 @@ const NodePalette: React.FC = () => {
   };
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: NodeType) => {
+    console.log('Drag started for node:', nodeType.label);
+    
     // Set basic text data first (for better compatibility)
     event.dataTransfer.setData('text/plain', nodeType.label);
     
@@ -109,8 +111,20 @@ const NodePalette: React.FC = () => {
       nodeType
     };
     
-    event.dataTransfer.setData('application/drakon-node', JSON.stringify(data));
-    event.dataTransfer.effectAllowed = 'move';
+    try {
+      const jsonData = JSON.stringify(data);
+      event.dataTransfer.setData('application/drakon-node', jsonData);
+      
+      // Add backup data formats for better browser compatibility
+      event.dataTransfer.setData('application/json', jsonData);
+      
+      // Set drag effect and image
+      event.dataTransfer.effectAllowed = 'move';
+      
+      console.log('Drag data set successfully');
+    } catch (error) {
+      console.error('Error setting drag data:', error);
+    }
   };
 
   return (

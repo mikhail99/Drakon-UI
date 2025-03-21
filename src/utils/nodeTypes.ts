@@ -145,6 +145,114 @@ export const nodeTypes: Record<string, NodeType> = {
     },
     component: () => null,
   },
+
+  // Search operations
+  'search.byName': {
+    id: 'search.byName',
+    label: 'Search by Name',
+    category: 'Search',
+    description: 'Find resources by their name or title',
+    inputs: [{ id: 'query', label: 'Query', type: 'string', required: true }],
+    outputs: [{ id: 'results', label: 'Results', type: 'array' }],
+    defaultConfig: {
+      placeholder: 'Enter search terms...'
+    },
+    component: () => null,
+  },
+  'search.byId': {
+    id: 'search.byId',
+    label: 'Search by ID',
+    category: 'Search',
+    description: 'Find resources by their unique identifier',
+    inputs: [{ id: 'id', label: 'ID', type: 'string', required: true }],
+    outputs: [{ id: 'result', label: 'Result', type: 'object' }],
+    defaultConfig: {},
+    component: () => null,
+  },
+  'search.bySimilarity': {
+    id: 'search.bySimilarity',
+    label: 'Search by Similarity',
+    category: 'Search',
+    description: 'Find resources similar to a given text or document',
+    inputs: [
+      { id: 'content', label: 'Content', type: 'string', required: true },
+      { id: 'threshold', label: 'Threshold', type: 'number', required: false }
+    ],
+    outputs: [{ id: 'results', label: 'Results', type: 'array' }],
+    defaultConfig: {
+      threshold: 0.75
+    },
+    component: () => null,
+  },
+
+  // Analyze operations
+  'analyze.references': {
+    id: 'analyze.references',
+    label: 'Analyze References',
+    category: 'Analyze',
+    description: 'Extract and analyze references from a document',
+    inputs: [{ id: 'document', label: 'Document', type: 'string', required: true }],
+    outputs: [{ id: 'references', label: 'References', type: 'array' }],
+    defaultConfig: {},
+    component: () => null,
+  },
+  'analyze.citations': {
+    id: 'analyze.citations',
+    label: 'Analyze Citations',
+    category: 'Analyze',
+    description: 'Extract and analyze citations from a document',
+    inputs: [{ id: 'document', label: 'Document', type: 'string', required: true }],
+    outputs: [{ id: 'citations', label: 'Citations', type: 'array' }],
+    defaultConfig: {},
+    component: () => null,
+  },
+  'analyze.topics': {
+    id: 'analyze.topics',
+    label: 'Analyze Topics',
+    category: 'Analyze',
+    description: 'Identify and extract key topics from content',
+    inputs: [
+      { id: 'content', label: 'Content', type: 'string', required: true },
+      { id: 'count', label: 'Topic Count', type: 'number', required: false }
+    ],
+    outputs: [{ id: 'topics', label: 'Topics', type: 'array' }],
+    defaultConfig: {
+      count: 5
+    },
+    component: () => null,
+  },
+
+  // Think operations
+  'think.mindMap': {
+    id: 'think.mindMap',
+    label: 'Build Mind Map',
+    category: 'Think',
+    description: 'Generate a mind map from concepts or ideas',
+    inputs: [
+      { id: 'centralConcept', label: 'Central Concept', type: 'string', required: true },
+      { id: 'depth', label: 'Depth', type: 'number', required: false }
+    ],
+    outputs: [{ id: 'mindMap', label: 'Mind Map', type: 'object' }],
+    defaultConfig: {
+      depth: 2
+    },
+    component: () => null,
+  },
+  'think.brainstorm': {
+    id: 'think.brainstorm',
+    label: 'Brainstorm',
+    category: 'Think',
+    description: 'Generate ideas and solutions for a given problem or topic',
+    inputs: [
+      { id: 'topic', label: 'Topic', type: 'string', required: true },
+      { id: 'count', label: 'Idea Count', type: 'number', required: false }
+    ],
+    outputs: [{ id: 'ideas', label: 'Ideas', type: 'array' }],
+    defaultConfig: {
+      count: 10
+    },
+    component: () => null,
+  }
 };
 
 // Get all unique categories

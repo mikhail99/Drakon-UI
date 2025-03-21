@@ -227,74 +227,50 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ onClose }) => {
     );
   };
   
+  // Button to run execution with error badge
+  const runButton = (
+    <Tooltip title="Run Graph">
+      <span>
+        <Badge
+          badgeContent={errorCount}
+          color="error"
+          overlap="circular"
+          invisible={errorCount === 0}
+        >
+          <IconButton 
+            color="primary" 
+            onClick={handleRunExecution}
+            disabled={isExecuting}
+          >
+            {isExecuting ? (
+              <CircularProgress size={24} />
+            ) : (
+              <PlayArrowIcon />
+            )}
+          </IconButton>
+        </Badge>
+      </span>
+    </Tooltip>
+  );
+  
   return (
     <PanelContainer elevation={1}>
       <PanelHeader>
-        <Typography variant="subtitle1">Inspector</Typography>
-        {onClose && (
-          <IconButton size="small" onClick={onClose}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        )}
+        <Typography variant="subtitle1">Results</Typography>
+        <Box display="flex" alignItems="center">
+          {runButton}
+          {onClose && (
+            <IconButton size="small" onClick={onClose}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
       </PanelHeader>
       
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs 
-          value={tabIndex} 
-          onChange={handleTabChange} 
-          variant="fullWidth"
-          aria-label="panel tabs"
-        >
-          <Tab 
-            icon={<SettingsIcon />} 
-            label="Configuration" 
-            id="tab-0" 
-            aria-controls="tabpanel-0" 
-          />
-          <Tab 
-            icon={
-              <Badge badgeContent={errorCount} color="error" invisible={errorCount === 0}>
-                <OutputIcon />
-              </Badge>
-            } 
-            label="Results" 
-            id="tab-1" 
-            aria-controls="tabpanel-1" 
-          />
-        </Tabs>
-      </Box>
+      <Divider />
       
       <PanelContent>
-        <TabPanel value={tabIndex} index={0}>
-          <NodeConfiguration />
-        </TabPanel>
-        
-        <TabPanel value={tabIndex} index={1}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" p={1} pb={0}>
-            <Typography variant="caption" color="textSecondary">
-              {executionStatus === 'idle' 
-                ? 'Not executed yet' 
-                : `Status: ${executionStatus.charAt(0).toUpperCase()}${executionStatus.slice(1)}`}
-            </Typography>
-            
-            <Button 
-              size="small" 
-              color="primary" 
-              onClick={handleRunExecution}
-              disabled={isExecuting}
-              variant="contained"
-              startIcon={isExecuting ? <CircularProgress size={16} /> : <PlayArrowIcon fontSize="small" />}
-            >
-              {isExecuting ? 'Running...' : 'Run Graph'}
-            </Button>
-          </Box>
-          
-          <Divider sx={{ mb: 1 }} />
-          
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            {renderResultContent()}
-          </Box>
-        </TabPanel>
+        {renderResultContent()}
       </PanelContent>
     </PanelContainer>
   );

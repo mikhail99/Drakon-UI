@@ -6,6 +6,7 @@ import ReactFlow, {
   NodeTypes,
   EdgeTypes,
   ReactFlowInstance,
+  Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css'; // Make sure styles are imported
 import { styled } from '@mui/material/styles';
@@ -47,9 +48,13 @@ const getId = (): string => `node_${Math.random().toString(36).substr(2, 9)}`;
  */
 interface GraphCanvasProps {
   onContextMenu: (event: React.MouseEvent) => void;
+  onNodeDoubleClick?: (nodeId: string) => void;
 }
 
-const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
+const GraphCanvas: React.FC<GraphCanvasProps> = ({ 
+  onContextMenu,
+  onNodeDoubleClick 
+}) => {
   const { nodes, edges, onNodesChange, onEdgesChange, addNode } = useGraphStore();
   const { onSelectionChange } = useGraphSelection();
   const { isValidConnection, handleConnect } = useGraphConnections();
@@ -57,10 +62,22 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  // Handle node double-click
+  const handleNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
+    // Stop propagation to prevent other click handlers
+    event.stopPropagation();
+    
+    // Call the provided callback with the node id
+    if (onNodeDoubleClick) {
+      onNodeDoubleClick(node.id);
+    }
+  }, [onNodeDoubleClick]);
+
   // Handle drop event directly here for better control
   const onDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      console.log('Drop event received in GraphCanvas');
       
       if (!reactFlowInstance) {
         console.warn('ReactFlow instance not initialized');
@@ -74,11 +91,24 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
         y: event.clientY - reactFlowBounds.top,
       });
       
-      // Get the dragged node type data
-      const jsonData = event.dataTransfer.getData('application/drakon-node');
+      console.log('Data transfer types:', event.dataTransfer.types);
+      
+      // Try different data formats
+      let jsonData = event.dataTransfer.getData('application/drakon-node');
+      
+      if (!jsonData) {
+        jsonData = event.dataTransfer.getData('application/json');
+        console.log('Using fallback application/json format');
+      }
+      
+      if (!jsonData && event.dataTransfer.getData('text/plain')) {
+        console.log('Only text/plain format available, cannot create node');
+        return;
+      }
       
       if (jsonData) {
         try {
+          console.log('Parsing JSON data:', jsonData);
           const data = JSON.parse(jsonData);
           const nodeType = data.nodeType;
           
@@ -96,11 +126,15 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
             },
           };
           
+          console.log('Creating new node:', newNode);
+          
           // Add node to the graph
           addNode(newNode);
         } catch (error) {
           console.error('Error adding node:', error);
         }
+      } else {
+        console.log('No valid node data found in drop event');
       }
     },
     [reactFlowInstance, addNode]
@@ -110,6 +144,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+    // Can uncomment for debugging: console.log('Drag over event in GraphCanvas');
   }, []);
 
   return (
@@ -125,6 +160,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({ onContextMenu }) => {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onInit={setReactFlowInstance}
+        onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{

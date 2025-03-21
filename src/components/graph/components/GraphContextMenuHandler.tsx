@@ -2,13 +2,19 @@ import React, { useState, useCallback } from 'react';
 import ContextMenu, { ContextMenuPosition } from '../../menu/ContextMenu';
 import { useGraphStore } from '../../../store/graphStore';
 
+interface GraphContextMenuHandlerProps {
+  onContextMenu: (event: React.MouseEvent) => void;
+  children?: React.ReactNode;
+}
+
 /**
  * GraphContextMenuHandler - Manages the graph context menu
  * Handles opening, closing, and actions for the right-click context menu
  */
-const GraphContextMenuHandler: React.FC<{
-  onContextMenu: (event: React.MouseEvent) => void;
-}> = ({ onContextMenu }) => {
+const GraphContextMenuHandler: React.FC<GraphContextMenuHandlerProps> = ({ 
+  onContextMenu,
+  children 
+}) => {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     open: boolean;
@@ -43,6 +49,13 @@ const GraphContextMenuHandler: React.FC<{
     
     // Call the passed onContextMenu handler
     onContextMenu(event);
+  };
+  
+  // Allow drag events to pass through
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    // Don't stop propagation - let the event bubble to inner components
   };
   
   // Handle delete action from context menu
@@ -90,7 +103,18 @@ const GraphContextMenuHandler: React.FC<{
   }, []);
 
   return (
-    <>
+    <div 
+      onContextMenu={handleContextMenu} 
+      onDragOver={handleDragOver}
+      style={{ 
+        display: 'flex', 
+        flex: 1, 
+        position: 'relative',
+        width: '100%',
+        height: '100%'
+      }}
+    >
+      {children}
       <ContextMenu
         open={contextMenu.open}
         position={contextMenu.position}
@@ -101,7 +125,7 @@ const GraphContextMenuHandler: React.FC<{
         hasSelection={selectedElements.nodes.length > 0 || selectedElements.edges.length > 0}
         hasClipboard={hasClipboardContent}
       />
-    </>
+    </div>
   );
 };
 
