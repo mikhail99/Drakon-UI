@@ -1,10 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   Panel,
   ReactFlowProvider,
   NodeTypes,
+  EdgeTypes,
   useReactFlow,
   OnSelectionChangeParams,
   Viewport,
@@ -14,6 +15,9 @@ import ReactFlow, {
   XYPosition,
   useNodesState,
   useEdgesState,
+  MiniMap,
+  MarkerType,
+  Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { styled } from '@mui/material/styles';
@@ -23,6 +27,9 @@ import RedoIcon from '@mui/icons-material/Redo';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
+import FileCopyIcon from '@mui/icons-material/FileCopy';
+import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+import CommentIcon from '@mui/icons-material/Comment';
 
 import useGraphStore from '../../store/graphStore';
 import { useCommonKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -30,6 +37,9 @@ import NodeWrapper from '../nodes/NodeWrapper';
 import NodePalette from '../palette/NodePalette';
 import NodeConfiguration from '../configuration/NodeConfiguration';
 import { NodeType, NodeData } from '../../types/node';
+import LabeledEdge from '../edges/LabeledEdge';
+import ContextMenu, { ContextMenuPosition } from '../menu/ContextMenu';
+import CommentNode from '../nodes/CommentNode';
 
 const GraphContainer = styled('div')({
   width: '100%',
@@ -46,17 +56,53 @@ const FlowContainer = styled('div')({
 // Define custom node types
 const nodeTypes: NodeTypes = {
   default: NodeWrapper,
+  comment: CommentNode,
+};
+
+// Define custom edge types
+const edgeTypes: EdgeTypes = {
+  default: LabeledEdge,
 };
 
 // Connection validation function
-const isValidConnection = (connection: any) => {
+const isValidConnection = (connection: Connection) => {
   // We'll implement real validation in the future
   return true;
 };
 
 const GraphControls = () => {
-  const { undo, redo } = useGraphStore();
+  const { undo, redo, copySelectedElements, pasteElements } = useGraphStore();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const reactFlowInstance = useReactFlow();
+
+  // Add a comment at the center of the viewport
+  const addComment = () => {
+    const { nodes, viewport } = useGraphStore.getState();
+    const id = `comment_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Calculate center position
+    const position = {
+      x: (-viewport.x + window.innerWidth / 2) / viewport.zoom - 75, // Center x, adjusting for node width
+      y: (-viewport.y + window.innerHeight / 2) / viewport.zoom - 30, // Center y, adjusting for node height
+    };
+    
+    // Create comment node with proper NodeData structure
+    const commentNode = {
+      id,
+      type: 'comment',
+      position,
+      data: {
+        label: 'Comment',
+        type: 'comment',
+        inputs: [],
+        outputs: [],
+        config: { text: 'Add note here...' }
+      },
+      selected: true,
+    };
+    
+    useGraphStore.getState().addNode(commentNode);
+  };
 
   return (
     <Panel position="top-left">
@@ -89,6 +135,25 @@ const GraphControls = () => {
           </Button>
         </Tooltip>
       </ButtonGroup>
+      <ButtonGroup style={{ marginLeft: 8 }}>
+        <Tooltip title="Copy (Ctrl+C)">
+          <Button onClick={copySelectedElements} size="small">
+            <FileCopyIcon fontSize="small" />
+          </Button>
+        </Tooltip>
+        <Tooltip title="Paste (Ctrl+V)">
+          <Button onClick={pasteElements} size="small">
+            <ContentPasteIcon fontSize="small" />
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
+      <ButtonGroup style={{ marginLeft: 8 }}>
+        <Tooltip title="Add Comment (Ctrl+M)">
+          <Button onClick={addComment} size="small">
+            <CommentIcon fontSize="small" />
+          </Button>
+        </Tooltip>
+      </ButtonGroup>
     </Panel>
   );
 };
@@ -111,8 +176,40 @@ const GraphEditorInner = () => {
     setViewport,
     setSelectedElements,
     addNode,
+    copySelectedElements,
+    pasteElements,
   } = useGraphStore();
   const { screenToFlowPosition } = useReactFlow();
+  const clipboardRef = useRef<{ nodes: Node[], edges: Edge[] } | null>(null);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    open: boolean;
+    position: ContextMenuPosition;
+  }>({
+    open: false,
+    position: { x: 0, y: 0 },
+  });
+  
+  // Detect if there's content in the clipboard
+  const [hasClipboardContent, setHasClipboardContent] = useState<boolean>(false);
+  
+  // Update clipboard status after copy operation
+  useEffect(() => {
+    // This is a simplified check - in a real app we'd need to handle this differently
+    // since we can't directly check the contents of the system clipboard for security reasons
+    const checkClipboard = () => {
+      // For now, assume clipboard has content if we've copied something
+      const clipboard = window as any;
+      setHasClipboardContent(!!clipboard.clipboardData || !!clipboardRef.current);
+    };
+    
+    checkClipboard();
+    window.addEventListener('copy', checkClipboard);
+    return () => {
+      window.removeEventListener('copy', checkClipboard);
+    };
+  }, []);
 
   // Use keyboard shortcuts
   useCommonKeyboardShortcuts();
@@ -185,8 +282,85 @@ const GraphEditorInner = () => {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
+  // Handle connection creation with custom edge properties
+  const handleConnect = useCallback(
+    (params: Connection) => {
+      // Get source node and port details
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const sourcePort = sourceNode?.data.outputs?.find(p => p.id === params.sourceHandle);
+      
+      // Get target node and port details
+      const targetNode = nodes.find(n => n.id === params.target);
+      const targetPort = targetNode?.data.inputs?.find(p => p.id === params.targetHandle);
+      
+      // Create label from port names
+      const sourceName = sourcePort?.label || 'output';
+      const targetName = targetPort?.label || 'input';
+      const sourceType = sourcePort?.type || 'unknown';
+      
+      // Enhance the connection with custom data and style
+      const enhancedConnection = {
+        ...params,
+        type: 'default', // Use our custom edge type
+        animated: false, // Set to true for animated edges if needed
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#555' },
+        data: {
+          label: `${sourceName} → ${targetName}`,
+          sourceType: sourceType,
+          targetType: targetPort?.type,
+        },
+      };
+      
+      onConnect(enhancedConnection);
+    },
+    [nodes, onConnect]
+  );
+
+  // Handle context menu open
+  const onContextMenu = (event: React.MouseEvent) => {
+    // Prevent default context menu
+    event.preventDefault();
+    
+    // Get mouse position
+    setContextMenu({
+      open: true,
+      position: { x: event.clientX, y: event.clientY },
+    });
+  };
+  
+  // Close context menu
+  const closeContextMenu = () => {
+    setContextMenu({ ...contextMenu, open: false });
+  };
+  
+  // Handle delete action from context menu
+  const handleDelete = () => {
+    const { selectedElements } = useGraphStore.getState();
+    
+    // Delete selected nodes
+    if (selectedElements.nodes.length > 0) {
+      const nodeChanges = selectedElements.nodes.map(id => ({
+        id,
+        type: 'remove' as const,
+      }));
+      onNodesChange(nodeChanges);
+    }
+    
+    // Delete selected edges
+    if (selectedElements.edges.length > 0) {
+      const edgeChanges = selectedElements.edges.map(id => ({
+        id,
+        type: 'remove' as const,
+      }));
+      onEdgesChange(edgeChanges);
+    }
+  };
+
   return (
-    <GraphContainer data-testid="graph-container">
+    <GraphContainer 
+      data-testid="graph-container"
+      onContextMenu={onContextMenu}
+    >
       <NodePalette />
       <FlowContainer>
         <ReactFlow
@@ -194,12 +368,17 @@ const GraphEditorInner = () => {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onConnect={handleConnect}
           onSelectionChange={onSelectionChange}
           onMoveEnd={onMoveEnd}
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{
+            type: 'default',
+            markerEnd: { type: MarkerType.ArrowClosed },
+          }}
           isValidConnection={isValidConnection}
           fitView
           snapToGrid
@@ -209,7 +388,33 @@ const GraphEditorInner = () => {
           <Background />
           <Controls />
           <GraphControls />
+          <MiniMap 
+            nodeStrokeColor={(n) => {
+              return n.selected ? '#ff0072' : '#555';
+            }}
+            nodeColor={(n) => {
+              return n.data.type.startsWith('math.') 
+                ? '#00ff00' 
+                : n.data.type.startsWith('io.') 
+                ? '#0041d0' 
+                : '#ff0072';
+            }}
+            style={{ height: 120 }}
+          />
         </ReactFlow>
+        
+        {/* Context Menu */}
+        <ContextMenu
+          open={contextMenu.open}
+          position={contextMenu.position}
+          onClose={closeContextMenu}
+          onCopy={copySelectedElements}
+          onPaste={pasteElements}
+          onDelete={handleDelete}
+          hasSelection={useGraphStore.getState().selectedElements.nodes.length > 0 || 
+                       useGraphStore.getState().selectedElements.edges.length > 0}
+          hasClipboard={hasClipboardContent}
+        />
       </FlowContainer>
       <NodeConfiguration />
     </GraphContainer>
