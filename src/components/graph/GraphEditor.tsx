@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,9 +8,12 @@ import ReactFlow, {
   useReactFlow,
   OnSelectionChangeParams,
   Viewport,
+  OnMoveEnd,
   Node,
   Edge,
-  OnMoveEnd,
+  XYPosition,
+  useNodesState,
+  useEdgesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { styled } from '@mui/material/styles';
@@ -24,10 +27,20 @@ import FitScreenIcon from '@mui/icons-material/FitScreen';
 import useGraphStore from '../../store/graphStore';
 import { useCommonKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodeWrapper from '../nodes/NodeWrapper';
+import NodePalette from '../palette/NodePalette';
+import NodeConfiguration from '../configuration/NodeConfiguration';
+import { NodeType, NodeData } from '../../types/node';
 
 const GraphContainer = styled('div')({
   width: '100%',
   height: '100vh',
+  display: 'flex',
+});
+
+const FlowContainer = styled('div')({
+  flex: 1,
+  height: '100%',
+  position: 'relative',
 });
 
 // Define custom node types
@@ -80,6 +93,14 @@ const GraphControls = () => {
   );
 };
 
+// Generate a unique node ID
+const getId = (): string => `node_${Math.random().toString(36).substr(2, 9)}`;
+
+interface DragItem {
+  type: string;
+  nodeType: NodeType;
+}
+
 const GraphEditorInner = () => {
   const {
     nodes,
@@ -89,7 +110,9 @@ const GraphEditorInner = () => {
     onConnect,
     setViewport,
     setSelectedElements,
+    addNode,
   } = useGraphStore();
+  const { screenToFlowPosition } = useReactFlow();
 
   // Use keyboard shortcuts
   useCommonKeyboardShortcuts();
@@ -113,27 +136,82 @@ const GraphEditorInner = () => {
     [setViewport]
   );
 
+  // Handle drop event from palette
+  const onDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      // Get drop position adjusted to current viewport
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      // Get the dragged node type data
+      const jsonData = event.dataTransfer.getData('application/drakon-node');
+      
+      if (jsonData) {
+        try {
+          const dragItem = JSON.parse(jsonData) as DragItem;
+          const nodeType = dragItem.nodeType;
+
+          // Create a new node
+          const newNode: Node<NodeData> = {
+            id: getId(),
+            type: 'default',
+            position,
+            data: {
+              label: nodeType.label,
+              type: nodeType.id,
+              inputs: nodeType.inputs,
+              outputs: nodeType.outputs,
+              config: { ...nodeType.defaultConfig },
+            },
+          };
+
+          // Add node to the graph
+          addNode(newNode);
+        } catch (error) {
+          console.error('Error adding node:', error);
+        }
+      }
+    },
+    [addNode, screenToFlowPosition]
+  );
+
+  // Enable drop by preventing default behavior for drag over events
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
   return (
     <GraphContainer data-testid="graph-container">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onSelectionChange={onSelectionChange}
-        onMoveEnd={onMoveEnd}
-        nodeTypes={nodeTypes}
-        isValidConnection={isValidConnection}
-        fitView
-        snapToGrid
-        snapGrid={[15, 15]}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-      >
-        <Background />
-        <Controls />
-        <GraphControls />
-      </ReactFlow>
+      <NodePalette />
+      <FlowContainer>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onSelectionChange={onSelectionChange}
+          onMoveEnd={onMoveEnd}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          nodeTypes={nodeTypes}
+          isValidConnection={isValidConnection}
+          fitView
+          snapToGrid
+          snapGrid={[15, 15]}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        >
+          <Background />
+          <Controls />
+          <GraphControls />
+        </ReactFlow>
+      </FlowContainer>
+      <NodeConfiguration />
     </GraphContainer>
   );
 };
