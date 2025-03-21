@@ -38,6 +38,8 @@ import LabeledEdge from '../edges/LabeledEdge';
 import ContextMenu, { ContextMenuPosition } from '../menu/ContextMenu';
 import CommentNode from '../nodes/CommentNode';
 import { EdgeData } from '../../types/graph';
+import GraphErrorBoundary from '../error/GraphErrorBoundary';
+import { tryCatch } from '../../utils/errorUtils';
 
 const GraphContainer = styled('div')({
   width: '100%',
@@ -289,40 +291,44 @@ const GraphEditorInner = () => {
         return;
       }
       
-      // Get source node and port details
-      const sourceNode = nodes.find((n: Node<NodeData>) => n.id === params.source);
-      const sourcePort = sourceNode?.data.outputs?.find((p: PortDefinition) => p.id === params.sourceHandle);
-      
-      // Get target node and port details
-      const targetNode = nodes.find((n: Node<NodeData>) => n.id === params.target);
-      const targetPort = targetNode?.data.inputs?.find((p: PortDefinition) => p.id === params.targetHandle);
-      
-      if (!sourceNode || !targetNode) {
-        console.error('Could not find source or target node for connection:', params);
-        return;
+      try {
+        // Get source node and port details
+        const sourceNode = nodes.find((n: Node<NodeData>) => n.id === params.source);
+        const sourcePort = sourceNode?.data.outputs?.find((p: PortDefinition) => p.id === params.sourceHandle);
+        
+        // Get target node and port details
+        const targetNode = nodes.find((n: Node<NodeData>) => n.id === params.target);
+        const targetPort = targetNode?.data.inputs?.find((p: PortDefinition) => p.id === params.targetHandle);
+        
+        if (!sourceNode || !targetNode) {
+          console.error('Could not find source or target node for connection:', params);
+          return;
+        }
+        
+        // Create label from port names
+        const sourceName = sourcePort?.label || 'output';
+        const targetName = targetPort?.label || 'input';
+        const sourceType = sourcePort?.type || 'unknown';
+        
+        // Enhance the connection with custom data and style
+        const enhancedConnection = {
+          ...params,
+          id: `e${params.source}-${params.sourceHandle}-${params.target}-${params.targetHandle}`,
+          type: 'default', // Use our custom edge type
+          animated: false, // Set to true for animated edges if needed
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#555' },
+          data: {
+            label: `${sourceName} → ${targetName}`,
+            sourceType: sourceType,
+            targetType: targetPort?.type,
+          },
+        };
+        
+        console.log('Creating connection:', enhancedConnection);
+        onConnect(enhancedConnection);
+      } catch (error) {
+        console.error('Error creating connection:', error);
       }
-      
-      // Create label from port names
-      const sourceName = sourcePort?.label || 'output';
-      const targetName = targetPort?.label || 'input';
-      const sourceType = sourcePort?.type || 'unknown';
-      
-      // Enhance the connection with custom data and style
-      const enhancedConnection = {
-        ...params,
-        id: `e${params.source}-${params.sourceHandle}-${params.target}-${params.targetHandle}`,
-        type: 'default', // Use our custom edge type
-        animated: false, // Set to true for animated edges if needed
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#555' },
-        data: {
-          label: `${sourceName} → ${targetName}`,
-          sourceType: sourceType,
-          targetType: targetPort?.type,
-        },
-      };
-      
-      console.log('Creating connection:', enhancedConnection);
-      onConnect(enhancedConnection);
     },
     [nodes, onConnect]
   );
@@ -346,34 +352,46 @@ const GraphEditorInner = () => {
   
   // Handle delete action from context menu
   const handleDelete = () => {
-    const { selectedElements } = useGraphStore.getState();
-    
-    // Delete selected nodes
-    if (selectedElements.nodes.length > 0) {
-      const nodeChanges = selectedElements.nodes.map((id: string) => ({
-        id,
-        type: 'remove' as const,
-      }));
-      onNodesChange(nodeChanges);
-    }
-    
-    // Delete selected edges
-    if (selectedElements.edges.length > 0) {
-      const edgeChanges = selectedElements.edges.map((id: string) => ({
-        id,
-        type: 'remove' as const,
-      }));
-      onEdgesChange(edgeChanges);
+    try {
+      const { selectedElements } = useGraphStore.getState();
+      
+      // Delete selected nodes
+      if (selectedElements.nodes.length > 0) {
+        const nodeChanges = selectedElements.nodes.map((id: string) => ({
+          id,
+          type: 'remove' as const,
+        }));
+        onNodesChange(nodeChanges);
+      }
+      
+      // Delete selected edges
+      if (selectedElements.edges.length > 0) {
+        const edgeChanges = selectedElements.edges.map((id: string) => ({
+          id,
+          type: 'remove' as const,
+        }));
+        onEdgesChange(edgeChanges);
+      }
+    } catch (error) {
+      console.error('Error deleting elements:', error);
     }
   };
 
   // Add a reference to the copy and paste handlers
   const handleCopy = useCallback(() => {
-    useGraphStore().copySelectedElements();
+    try {
+      useGraphStore().copySelectedElements();
+    } catch (error) {
+      console.error('Error copying elements:', error);
+    }
   }, []);
 
   const handlePaste = useCallback(() => {
-    useGraphStore().pasteElements();
+    try {
+      useGraphStore().pasteElements();
+    } catch (error) {
+      console.error('Error pasting elements:', error);
+    }
   }, []);
 
   return (
@@ -381,7 +399,9 @@ const GraphEditorInner = () => {
       data-testid="graph-container"
       onContextMenu={onContextMenu}
     >
-      <NodePalette />
+      <GraphErrorBoundary componentName="Node Palette">
+        <NodePalette />
+      </GraphErrorBoundary>
       <FlowContainer>
         <ReactFlow
           nodes={nodes}
@@ -440,7 +460,9 @@ const GraphEditorInner = () => {
           hasClipboard={hasClipboardContent}
         />
       </FlowContainer>
-      <NodeConfiguration />
+      <GraphErrorBoundary componentName="Node Configuration">
+        <NodeConfiguration />
+      </GraphErrorBoundary>
     </GraphContainer>
   );
 };
@@ -449,7 +471,9 @@ const GraphEditorInner = () => {
 const GraphEditor = () => {
   return (
     <ReactFlowProvider>
-      <GraphEditorInner />
+      <GraphErrorBoundary componentName="Graph Editor">
+        <GraphEditorInner />
+      </GraphErrorBoundary>
     </ReactFlowProvider>
   );
 };

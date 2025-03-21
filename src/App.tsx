@@ -1,6 +1,7 @@
 import React from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import GraphEditor from './components/graph/GraphEditor';
+import GraphErrorBoundary from './components/error/GraphErrorBoundary';
 
 const theme = createTheme({
   palette: {
@@ -21,7 +22,9 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <GraphEditor />
+      <GraphErrorBoundary componentName="Application">
+        <GraphEditor />
+      </GraphErrorBoundary>
     </ThemeProvider>
   );
 }
