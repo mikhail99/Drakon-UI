@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider, createTheme, Button, AppBar, Toolbar, Typog
 import GraphEditor from './components/graph/GraphEditor';
 import GraphErrorBoundary from './components/error/GraphErrorBoundary';
 import NodeStyleDemo from './components/demo/NodeStyleDemo';
+import FileMenu from './components/menu/FileMenu';
 
 const theme = createTheme({
   palette: {
@@ -38,7 +39,11 @@ function App() {
           </Button>
         </Toolbar>
       </AppBar>
-      <Box sx={{ height: 'calc(100vh - 64px)' }}>
+      
+      {/* Show FileMenu only when in Editor mode, not in Demo mode */}
+      {!showDemo && <FileMenu />}
+      
+      <Box sx={{ height: 'calc(100vh - 64px - (showDemo ? 0 : 52px))' }}>
         <GraphErrorBoundary componentName="Application">
           {showDemo ? (
             <NodeStyleDemo />

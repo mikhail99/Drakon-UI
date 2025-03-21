@@ -13,8 +13,10 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { nodeCategories, nodeTypesByCategory } from '../../utils/nodeTypes';
+import { nodeTypes as allNodeTypes } from '../../utils/nodeTypes';
 import { NodeType } from '../../types/node';
+import { useTemplateStore } from '../../store/templateStore';
+import { getNodeTypesForTemplate } from '../../utils/projectTemplates';
 
 // Styled components
 const PaletteContainer = styled(Paper)(({ theme }) => ({
@@ -54,6 +56,27 @@ const DraggableNode = styled(Box)(({ theme }) => ({
 const NodePalette: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  
+  // Get the active template from the store
+  const { activeTemplateId } = useTemplateStore();
+  
+  // Get the node types based on the active template
+  const templateNodeTypes = useMemo(() => {
+    return getNodeTypesForTemplate(activeTemplateId);
+  }, [activeTemplateId]);
+  
+  // Get node categories based on template
+  const nodeCategories = useMemo(() => {
+    return [...new Set(Object.values(templateNodeTypes).map(type => type.category))];
+  }, [templateNodeTypes]);
+  
+  // Group node types by category based on template
+  const nodeTypesByCategory = useMemo(() => {
+    return nodeCategories.reduce((acc, category) => {
+      acc[category] = Object.values(templateNodeTypes).filter(type => type.category === category);
+      return acc;
+    }, {} as Record<string, NodeType[]>);
+  }, [nodeCategories, templateNodeTypes]);
 
   const filteredCategories = useMemo(() => {
     return nodeCategories.map((categoryName) => {
@@ -65,7 +88,7 @@ const NodePalette: React.FC = () => {
         )
       };
     }).filter(category => category.nodes.length > 0);
-  }, [searchTerm]);
+  }, [searchTerm, nodeCategories, nodeTypesByCategory]);
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories(prev => {

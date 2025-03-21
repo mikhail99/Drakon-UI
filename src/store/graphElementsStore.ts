@@ -3,6 +3,7 @@ import { applyNodeChanges, applyEdgeChanges, Edge, NodeChange, EdgeChange, Conne
 import { NodeData } from '../types/node';
 import { EdgeData } from '../types/graph';
 import { validateConnection } from '../utils/graphUtils';
+import { graphEvents, GRAPH_EVENTS } from '../utils/eventEmitter';
 
 interface GraphElementsState {
   nodes: Node<NodeData>[];
@@ -36,43 +37,91 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
 
   // Node actions
   onNodesChange: (changes) => {
-    set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
-    }));
+    set((state) => {
+      const updatedNodes = applyNodeChanges(changes, state.nodes);
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, updatedNodes, state.edges);
+      
+      return {
+        nodes: updatedNodes,
+      };
+    });
   },
 
   addNode: (node) => {
-    set((state) => ({
-      nodes: [...state.nodes, node],
-    }));
+    set((state) => {
+      const updatedNodes = [...state.nodes, node];
+      
+      // Emit node added event
+      graphEvents.emit(GRAPH_EVENTS.NODE_ADDED, node);
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, updatedNodes, state.edges);
+      
+      return {
+        nodes: updatedNodes,
+      };
+    });
   },
 
   updateNodeConfig: (nodeId, config) => {
     set((state) => {
       const updatedNodes = state.nodes.map(node => {
         if (node.id === nodeId) {
-          return {
+          const updatedNode = {
             ...node,
             data: {
               ...node.data,
               config
             }
           };
+          
+          // Emit node updated event
+          graphEvents.emit(GRAPH_EVENTS.NODE_UPDATED, updatedNode);
+          
+          return updatedNode;
         }
         return node;
       });
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, updatedNodes, state.edges);
+      
       return { nodes: updatedNodes };
     });
   },
 
   removeNode: (nodeId) => {
     set((state) => {
+      // Filter edges that don't use the node being removed
       const newEdges = state.edges.filter(
         (edge) => edge.source !== nodeId && edge.target !== nodeId
       );
 
+      // Find the node being removed (for event)
+      const nodeToRemove = state.nodes.find(node => node.id === nodeId);
+      
+      // Filter out the node
+      const updatedNodes = state.nodes.filter((node) => node.id !== nodeId);
+      
+      // Emit node removed event
+      if (nodeToRemove) {
+        graphEvents.emit(GRAPH_EVENTS.NODE_REMOVED, nodeToRemove);
+      }
+      
+      // Emit edges removed events for any connected edges
+      const removedEdges = state.edges.filter(
+        (edge) => edge.source === nodeId || edge.target === nodeId
+      );
+      
+      removedEdges.forEach(edge => {
+        graphEvents.emit(GRAPH_EVENTS.EDGE_REMOVED, edge);
+      });
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, updatedNodes, newEdges);
+      
       return {
-        nodes: state.nodes.filter((node) => node.id !== nodeId),
+        nodes: updatedNodes,
         edges: newEdges,
       };
     });
@@ -80,26 +129,51 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
 
   // Edge actions
   onEdgesChange: (changes) => {
-    set((state) => ({
-      edges: applyEdgeChanges(changes, state.edges),
-    }));
+    set((state) => {
+      const updatedEdges = applyEdgeChanges(changes, state.edges);
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, state.nodes, updatedEdges);
+      
+      return {
+        edges: updatedEdges,
+      };
+    });
   },
 
   onConnect: (connection) => {
-    set((state) => ({
-      edges: addEdge(connection, state.edges),
-    }));
+    set((state) => {
+      const newEdges = addEdge(connection, state.edges);
+      const addedEdge = newEdges[newEdges.length - 1]; // The newly added edge
+      
+      // Emit edge added event
+      graphEvents.emit(GRAPH_EVENTS.EDGE_ADDED, addedEdge);
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, state.nodes, newEdges);
+      
+      return {
+        edges: newEdges,
+      };
+    });
   },
 
   updateEdge: (updatedEdge) => {
-    set((state) => ({
-      edges: state.edges.map((edge) => {
+    set((state) => {
+      const newEdges = state.edges.map((edge) => {
         if (edge.id === updatedEdge.id) {
+          // Emit edge updated event
+          graphEvents.emit(GRAPH_EVENTS.EDGE_UPDATED, updatedEdge);
           return updatedEdge;
         }
         return edge;
-      }),
-    }));
+      });
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, state.nodes, newEdges);
+      
+      return {
+        edges: newEdges,
+      };
+    });
   },
 
   addEdge: (edge) => {
@@ -118,23 +192,52 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
 
       if (!isValid) return state;
 
+      // Emit edge added event
+      graphEvents.emit(GRAPH_EVENTS.EDGE_ADDED, edge);
+      
+      const newEdges = [...state.edges, edge];
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, state.nodes, newEdges);
+      
       return {
-        edges: [...state.edges, edge],
+        edges: newEdges,
       };
     });
   },
 
   removeEdge: (edgeId) => {
-    set((state) => ({
-      edges: state.edges.filter((edge) => edge.id !== edgeId),
-    }));
+    set((state) => {
+      // Find the edge being removed (for event)
+      const edgeToRemove = state.edges.find(edge => edge.id === edgeId);
+      
+      const newEdges = state.edges.filter((edge) => edge.id !== edgeId);
+      
+      // Emit edge removed event
+      if (edgeToRemove) {
+        graphEvents.emit(GRAPH_EVENTS.EDGE_REMOVED, edgeToRemove);
+      }
+      
+      // Emit change event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, state.nodes, newEdges);
+      
+      return {
+        edges: newEdges,
+      };
+    });
   },
 
   clear: () => {
-    set(() => ({
-      nodes: [],
-      edges: [],
-    }));
+    set(() => {
+      // Emit clear event
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CLEARED);
+      graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, [], []);
+      
+      return {
+        nodes: [],
+        edges: [],
+      };
+    });
   },
 
   getState: () => {

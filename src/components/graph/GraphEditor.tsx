@@ -8,6 +8,8 @@ import NodeConfiguration from '../configuration/NodeConfiguration';
 import GraphErrorBoundary from '../error/GraphErrorBoundary';
 import GraphCanvas from './components/GraphCanvas';
 import GraphContextMenuHandler from './components/GraphContextMenuHandler';
+import TemplateSelectionDialog from '../dialogs/TemplateSelectionDialog';
+import { useTemplateStore } from '../../store/templateStore';
 
 // Main container for the graph editor
 const GraphContainer = styled('div')({
@@ -21,12 +23,22 @@ const GraphContainer = styled('div')({
  * Wraps the main graph components and manages their interactions
  */
 const GraphEditorInner: React.FC = () => {
-  // Use keyboard shortcuts
-  useKeyboardShortcuts();
+  // Use keyboard shortcuts and get template dialog state
+  const { showTemplateDialog, setShowTemplateDialog } = useKeyboardShortcuts();
+  
+  // Use template store for setting the active template
+  const { setActiveTemplate } = useTemplateStore();
 
   // This function will be passed to both the canvas and the context menu handler
   const handleContextMenu = (event: React.MouseEvent) => {
-    // Additional context menu handling if needed
+    // Prevent default browser context menu
+    event.preventDefault();
+  };
+  
+  // Handle template selection
+  const handleSelectTemplate = (templateId: string) => {
+    setActiveTemplate(templateId);
+    setShowTemplateDialog(false);
   };
 
   return (
@@ -42,6 +54,13 @@ const GraphEditorInner: React.FC = () => {
       <GraphErrorBoundary componentName="Node Configuration">
         <NodeConfiguration />
       </GraphErrorBoundary>
+      
+      {/* Template Selection Dialog */}
+      <TemplateSelectionDialog
+        open={showTemplateDialog}
+        onClose={() => setShowTemplateDialog(false)}
+        onSelectTemplate={handleSelectTemplate}
+      />
     </GraphContainer>
   );
 };
