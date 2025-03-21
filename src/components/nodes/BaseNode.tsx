@@ -12,28 +12,12 @@ const NodeContainer = styled('div')(({ theme }) => ({
 
 // Handle styling
 export const StyledHandle = styled(Handle)<{ color?: string }>(({ theme, color }) => ({
-  width: 10,
-  height: 10,
+  width: 12,
+  height: 12,
   background: color || theme.palette.primary.main,
+  border: '2px solid white',
+  borderRadius: '50%',
 }));
-
-// Port styling
-export const Port = styled('div')({
-  position: 'relative',
-  height: 20,
-  display: 'flex',
-  alignItems: 'center',
-});
-
-export const InputPort = styled(Port)({
-  marginLeft: 12,
-  justifyContent: 'flex-start',
-});
-
-export const OutputPort = styled(Port)({
-  marginRight: 12,
-  justifyContent: 'flex-end',
-});
 
 // Colors for different port types
 export const portTypeColors = {
@@ -42,7 +26,7 @@ export const portTypeColors = {
   boolean: '#d32f2f',
   array: '#7b1fa2',
   object: '#ff9800',
-  default: '#ccc'
+  default: '#3f51b5'
 };
 
 // Port component that can be reused
@@ -51,27 +35,38 @@ export interface PortComponentProps {
   position: Position;
   handleType?: 'source' | 'target';
   handleColor?: string;
+  index?: number;
+  total?: number;
 }
 
 export const PortComponent: React.FC<PortComponentProps> = ({ 
   definition, 
   position, 
   handleType,
-  handleColor 
+  handleColor,
+  index = 0,
+  total = 1
 }) => {
   const isInput = position === Position.Left || handleType === 'target';
-  const PortContainer = isInput ? InputPort : OutputPort;
   const type = handleType || (isInput ? 'target' : 'source');
   
+  // Calculate the position offset for handles
+  // For example, with 3 ports, positions would be at 25%, 50%, and 75% height
+  const offsetPercentage = total <= 1 ? 50 : (100 / (total + 1)) * (index + 1);
+  
+  const handleStyle = {
+    top: `${offsetPercentage}%`,
+    transform: 'translateY(-50%)'
+  };
+  
   return (
-    <PortContainer>
-      <StyledHandle
-        type={type}
-        position={position}
-        id={definition.id}
-        color={handleColor || portTypeColors[definition.type] || portTypeColors.default}
-      />
-    </PortContainer>
+    <StyledHandle
+      type={type}
+      position={position}
+      id={definition.id}
+      style={handleStyle}
+      color={handleColor || portTypeColors[definition.type] || portTypeColors.default}
+    />
   );
 };
 
@@ -93,25 +88,29 @@ const BaseNode: React.FC<BaseNodeProps> = ({
 }) => {
   // Render input/output ports if requested
   const renderInputPorts = () => {
-    if (!renderHandles || !data.inputs) return null;
+    if (!renderHandles || !data.inputs || data.inputs.length === 0) return null;
     
-    return data.inputs.map((input) => (
+    return data.inputs.map((input, index) => (
       <PortComponent 
         key={`input-${input.id}`} 
         definition={input} 
-        position={Position.Left} 
+        position={Position.Left}
+        index={index}
+        total={data.inputs.length}
       />
     ));
   };
   
   const renderOutputPorts = () => {
-    if (!renderHandles || !data.outputs) return null;
+    if (!renderHandles || !data.outputs || data.outputs.length === 0) return null;
     
-    return data.outputs.map((output) => (
+    return data.outputs.map((output, index) => (
       <PortComponent 
         key={`output-${output.id}`} 
         definition={output} 
-        position={Position.Right} 
+        position={Position.Right}
+        index={index}
+        total={data.outputs.length}
       />
     ));
   };
@@ -122,6 +121,10 @@ const BaseNode: React.FC<BaseNodeProps> = ({
       data-node-id={id}
       data-node-type={data.type}
       data-testid={`node-${id}`}
+      style={{ 
+        border: selected ? '2px solid #1976d2' : 'none',
+        borderRadius: '4px',
+      }}
     >
       {renderInputPorts()}
       {children}

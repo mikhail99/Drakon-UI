@@ -20,64 +20,80 @@ const Header = styled('div')(({ theme }) => ({
   color: theme.palette.primary.contrastText,
   borderTopLeftRadius: theme.shape.borderRadius,
   borderTopRightRadius: theme.shape.borderRadius,
+  display: 'flex',
+  alignItems: 'center',
 }));
+
+const NodeIcon = styled('div')({
+  marginRight: 8,
+  display: 'flex',
+  alignItems: 'center',
+});
 
 const NodeTitle = styled(Typography)({
   fontWeight: 'bold',
   fontSize: '0.9rem',
+  flexGrow: 1,
 });
 
 const StyledContent = styled(CardContent)(({ theme }) => ({
-  padding: theme.spacing(1),
+  padding: theme.spacing(1, 1.5),
   '&:last-child': {
     paddingBottom: theme.spacing(1),
   },
 }));
 
-const PortsContainer = styled('div')({
+const PortRow = styled('div')({
   display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
+  alignItems: 'center',
+  position: 'relative',
+  height: 28,
+  marginBottom: 4,
 });
 
 const PortLabel = styled(Typography)({
-  fontSize: '0.75rem',
-  marginLeft: 8,
-  marginRight: 8,
+  fontSize: '0.875rem',
+  paddingLeft: 8,
+  paddingRight: 8,
 });
 
 interface NodeWrapperProps extends NodeProps<NodeData> {}
 
 const NodeWrapper: React.FC<NodeWrapperProps> = (props) => {
   const { data } = props;
+
+  // Get an icon for the node based on its type
+  const getNodeIcon = () => {
+    // You could add icons here based on node type
+    // For now, just return null or a placeholder
+    return null;
+  };
   
-  // We'll handle rendering the card content here, and let BaseNode handle the ports/handles
+  // Render the card content
   const renderCardContent = () => (
     <StyledCard>
       <Header>
+        <NodeIcon>{getNodeIcon()}</NodeIcon>
         <NodeTitle variant="h6">{data.label}</NodeTitle>
       </Header>
       <StyledContent>
-        <PortsContainer>
-          {data.inputs.map((input) => (
-            <Tooltip key={input.id} title={input.description || input.type} placement="right">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: 10, height: 10 }} /> {/* Placeholder for handle */}
-                <PortLabel>{input.label}</PortLabel>
-              </div>
-            </Tooltip>
-          ))}
-        </PortsContainer>
-        <PortsContainer>
-          {data.outputs.map((output) => (
-            <Tooltip key={output.id} title={output.description || output.type} placement="left">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <PortLabel>{output.label}</PortLabel>
-                <div style={{ width: 10, height: 10 }} /> {/* Placeholder for handle */}
-              </div>
-            </Tooltip>
-          ))}
-        </PortsContainer>
+        {/* Input ports */}
+        {data.inputs?.map((input) => (
+          <Tooltip key={input.id} title={input.description || input.type} placement="left">
+            <PortRow>
+              <PortLabel>{input.label}</PortLabel>
+            </PortRow>
+          </Tooltip>
+        ))}
+        
+        {/* Output ports */}
+        {data.outputs?.map((output) => (
+          <Tooltip key={output.id} title={output.description || output.type} placement="right">
+            <PortRow style={{ justifyContent: 'flex-end' }}>
+              <PortLabel>{output.label}</PortLabel>
+            </PortRow>
+          </Tooltip>
+        ))}
       </StyledContent>
     </StyledCard>
   );
