@@ -9,6 +9,7 @@ import { NodeData } from '../../../types/node';
 const GraphMiniMap: React.FC = () => {
   return (
     <MiniMap 
+      position="bottom-right"
       nodeStrokeColor={(n) => {
         return n.selected ? '#ff0072' : '#555';
       }}
@@ -20,7 +21,10 @@ const GraphMiniMap: React.FC = () => {
           ? '#0041d0' 
           : '#ff0072';
       }}
-      style={{ height: 120 }}
+      style={{ 
+        height: 120,
+        bottom: 70  // Position the minimap higher
+      }}
     />
   );
 };
