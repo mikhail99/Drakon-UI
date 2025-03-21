@@ -1,10 +1,21 @@
 import { useEffect } from 'react';
-import useGraphStore from '../store/graphStore';
+import { useGraphStore } from '../store/graphStore';
 import { Node } from 'reactflow';
 import { NodeData } from '../types/node';
 
 export function useKeyboardShortcuts() {
-  const { undo, redo, copy, paste, deselectAll } = useGraphStore();
+  const graphStore = useGraphStore();
+  const { 
+    undo, 
+    redo, 
+    copy, 
+    paste, 
+    deselectAll, 
+    selectNodes, 
+    removeNode, 
+    nodes, 
+    selectedElements 
+  } = graphStore;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -35,8 +46,7 @@ export function useKeyboardShortcuts() {
           case 'a':
             event.preventDefault();
             // Select all nodes
-            const nodes = useGraphStore.getState().nodes;
-            useGraphStore.getState().selectNodes(nodes.map((node: Node<NodeData>) => node.id));
+            selectNodes(nodes.map((node: Node<NodeData>) => node.id));
             break;
           case 'escape':
             event.preventDefault();
@@ -46,9 +56,9 @@ export function useKeyboardShortcuts() {
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
         // Delete selected nodes
-        const selectedNodes = useGraphStore.getState().selectedElements.nodes;
-        selectedNodes.forEach((nodeId: string) => {
-          useGraphStore.getState().removeNode(nodeId);
+        const nodesToDelete = selectedElements.nodes;
+        nodesToDelete.forEach((nodeId: string) => {
+          removeNode(nodeId);
         });
       }
     };
@@ -57,5 +67,5 @@ export function useKeyboardShortcuts() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [undo, redo, copy, paste, deselectAll]);
+  }, [undo, redo, copy, paste, deselectAll, selectNodes, removeNode, nodes, selectedElements]);
 } 

@@ -1,8 +1,10 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { NavigationBar } from '../../components/NavigationBar';
 import useGraphStore from '../../store/graphStore';
+
+// Create a test container
+const container = document.createElement('div');
+document.body.appendChild(container);
 
 // Mock window.confirm and window.prompt
 global.confirm = jest.fn();
@@ -17,24 +19,24 @@ const mockAppendChild = jest.fn();
 const mockRemoveChild = jest.fn();
 const mockClick = jest.fn();
 
-const originalCreateElement = document.createElement;
-document.createElement = jest.fn((tagName) => {
+const originalCreateElement = document.createElement.bind(document);
+document.createElement = jest.fn((tagName: string) => {
   if (tagName === 'a') {
-    return {
-      href: '',
-      download: '',
-      click: mockClick
-    };
+    const element = originalCreateElement('a');
+    element.href = '';
+    element.download = '';
+    element.click = mockClick;
+    return element;
   } else if (tagName === 'input') {
-    return {
-      type: '',
-      accept: '',
-      click: mockClick,
-      onchange: null as any
-    };
+    const element = originalCreateElement('input');
+    element.type = '';
+    element.accept = '';
+    element.click = mockClick;
+    element.onchange = null;
+    return element;
   }
   return originalCreateElement(tagName);
-}) as any;
+}) as typeof document.createElement;
 
 Object.defineProperty(document.body, 'appendChild', {
   value: mockAppendChild
@@ -82,10 +84,19 @@ jest.mock('../../store/graphStore', () => ({
 describe('NavigationBar Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset container
+    container.innerHTML = '';
+  });
+
+  afterEach(() => {
+    // Clean up the container after each test
+    container.innerHTML = '';
+    // Reset mock implementations
+    jest.restoreAllMocks();
   });
 
   it('renders all navigation buttons', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     expect(screen.getByLabelText('new')).toBeInTheDocument();
     expect(screen.getByLabelText('open')).toBeInTheDocument();
@@ -95,41 +106,51 @@ describe('NavigationBar Component', () => {
   });
 
   it('enables/disables undo button based on history', () => {
-    render(<NavigationBar />);
-    
+    // Mock initial state
+    (useGraphStore as any).getState.mockReturnValue({
+      ...mockState,
+      history: { past: ['action1'], future: ['action2'] }
+    });
+
+    render(<NavigationBar />, { container });
     const undoButton = screen.getByLabelText('undo');
     expect(undoButton).not.toBeDisabled();
 
-    // Change history state to simulate no past actions
-    (useGraphStore as any).getState.mockReturnValueOnce({
+    // Update mock state to simulate no past actions
+    (useGraphStore as any).getState.mockReturnValue({
       ...mockState,
       history: { past: [], future: ['action1'] }
     });
 
-    render(<NavigationBar />);
-    const disabledUndoButton = screen.getByLabelText('undo');
-    expect(disabledUndoButton).toBeDisabled();
+    // Force re-render by clicking the button
+    fireEvent.click(undoButton);
+    expect(screen.getByLabelText('undo')).toBeDisabled();
   });
 
   it('enables/disables redo button based on history', () => {
-    render(<NavigationBar />);
-    
+    // Mock initial state
+    (useGraphStore as any).getState.mockReturnValue({
+      ...mockState,
+      history: { past: ['action1'], future: ['action2'] }
+    });
+
+    render(<NavigationBar />, { container });
     const redoButton = screen.getByLabelText('redo');
     expect(redoButton).not.toBeDisabled();
 
-    // Change history state to simulate no future actions
-    (useGraphStore as any).getState.mockReturnValueOnce({
+    // Update mock state to simulate no future actions
+    (useGraphStore as any).getState.mockReturnValue({
       ...mockState,
       history: { past: ['action1'], future: [] }
     });
 
-    render(<NavigationBar />);
-    const disabledRedoButton = screen.getByLabelText('redo');
-    expect(disabledRedoButton).toBeDisabled();
+    // Force re-render by clicking the button
+    fireEvent.click(redoButton);
+    expect(screen.getByLabelText('redo')).toBeDisabled();
   });
 
   it('calls undo when undo button is clicked', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     const undoButton = screen.getByLabelText('undo');
     fireEvent.click(undoButton);
@@ -138,7 +159,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('calls redo when redo button is clicked', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     const redoButton = screen.getByLabelText('redo');
     fireEvent.click(redoButton);
@@ -147,7 +168,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('prompts for confirmation before creating a new graph', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     const newButton = screen.getByLabelText('new');
     (global.confirm as jest.Mock).mockReturnValueOnce(true);
@@ -159,7 +180,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('does not clear if user cancels new graph creation', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     const newButton = screen.getByLabelText('new');
     (global.confirm as jest.Mock).mockReturnValueOnce(false);
@@ -171,7 +192,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('creates a file input when open button is clicked', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     const openButton = screen.getByLabelText('open');
     fireEvent.click(openButton);
@@ -184,7 +205,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('prompts for filename and saves graph when save button is clicked', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     (global.prompt as jest.Mock).mockReturnValueOnce('test-graph');
     
@@ -199,7 +220,7 @@ describe('NavigationBar Component', () => {
   });
 
   it('does not save if user cancels the filename prompt', () => {
-    render(<NavigationBar />);
+    render(<NavigationBar />, { container });
     
     (global.prompt as jest.Mock).mockReturnValueOnce(null);
     

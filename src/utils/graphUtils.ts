@@ -1,5 +1,6 @@
 import { Node, Edge } from 'reactflow';
-import { NodeData, Port, EdgeData } from '../types/graph';
+import { Port, EdgeData } from '../types/graph';
+import { NodeData } from '../types/node';
 
 export interface Position {
   x: number;
@@ -22,8 +23,8 @@ export function validateConnection(
   sourcePortId: string,
   targetPortId: string
 ): boolean {
-  const sourcePort = sourceNode.data.outputs.find(port => port.id === sourcePortId);
-  const targetPort = targetNode.data.inputs.find(port => port.id === targetPortId);
+  const sourcePort = sourceNode.data.outputs.find((port: Port) => port.id === sourcePortId);
+  const targetPort = targetNode.data.inputs.find((port: Port) => port.id === targetPortId);
 
   if (!sourcePort || !targetPort) {
     return false;
@@ -33,7 +34,7 @@ export function validateConnection(
     return false;
   }
 
-  return sourcePort.type === targetPort.type || sourcePort.type === 'any' || targetPort.type === 'any';
+  return sourcePort.type === targetPort.type;
 }
 
 /**
@@ -41,7 +42,6 @@ export function validateConnection(
  */
 export function findConnectedNodes(
   nodeId: string,
-  nodes: Node<NodeData>[],
   edges: Edge<EdgeData>[]
 ): string[] {
   const connectedNodes = new Set<string>();
@@ -49,19 +49,24 @@ export function findConnectedNodes(
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
-    const connectedEdges = edges.filter(
-      edge => edge.source === currentId || edge.target === currentId
-    );
-
-    for (const edge of connectedEdges) {
-      const nextId = edge.source === currentId ? edge.target : edge.source;
-      if (!connectedNodes.has(nextId)) {
-        connectedNodes.add(nextId);
-        queue.push(nextId);
+    if (!connectedNodes.has(currentId)) {
+      connectedNodes.add(currentId);
+      
+      // Find all edges connected to this node
+      const connectedEdges = edges.filter(
+        edge => edge.source === currentId || edge.target === currentId
+      );
+      
+      // Add connected nodes to queue
+      for (const edge of connectedEdges) {
+        const nextNode = edge.source === currentId ? edge.target : edge.source;
+        if (!connectedNodes.has(nextNode)) {
+          queue.push(nextNode);
+        }
       }
     }
   }
-
+  
   return Array.from(connectedNodes);
 }
 
@@ -72,6 +77,8 @@ export function calculateNodePosition(
   mousePosition: Position,
   gridSize: number = 20
 ): Position {
+  if (!gridSize) return mousePosition;
+  
   return {
     x: Math.round(mousePosition.x / gridSize) * gridSize,
     y: Math.round(mousePosition.y / gridSize) * gridSize

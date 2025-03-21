@@ -1,24 +1,15 @@
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import useGraphStore from '../../store/graphStore';
 
-// Mock the graphStore
-const mockUndo = jest.fn();
-const mockRedo = jest.fn();
-const mockCopy = jest.fn();
-const mockPaste = jest.fn();
-const mockDeselectAll = jest.fn();
-const mockSelectNodes = jest.fn();
-const mockRemoveNode = jest.fn();
-
+// Mock the graph store
 const mockState = {
-  undo: mockUndo,
-  redo: mockRedo,
-  copy: mockCopy,
-  paste: mockPaste,
-  deselectAll: mockDeselectAll,
-  selectNodes: mockSelectNodes,
-  removeNode: mockRemoveNode,
+  undo: jest.fn(),
+  redo: jest.fn(),
+  copy: jest.fn(),
+  paste: jest.fn(),
+  deselectAll: jest.fn(),
+  selectNodes: jest.fn(),
+  removeNode: jest.fn(),
   selectedElements: {
     nodes: ['node-1', 'node-2']
   },
@@ -29,30 +20,23 @@ const mockState = {
 };
 
 jest.mock('../../store/graphStore', () => ({
-  __esModule: true,
-  default: () => mockState,
+  useGraphStore: () => mockState
 }));
-
-// Mock for the static method
-(useGraphStore as any).getState = jest.fn(() => mockState);
 
 describe('useKeyboardShortcuts Hook', () => {
   let documentListeners: Record<string, EventListener> = {};
   
-  // Mock document event listeners
   beforeEach(() => {
+    jest.clearAllMocks();
     documentListeners = {};
     
     document.addEventListener = jest.fn((event, callback) => {
       documentListeners[event] = callback as EventListener;
     });
     
-    document.removeEventListener = jest.fn((event, callback) => {
+    document.removeEventListener = jest.fn((event) => {
       delete documentListeners[event];
     });
-    
-    // Clear all mocks before each test
-    jest.clearAllMocks();
   });
   
   it('registers event listeners on mount', () => {
@@ -80,7 +64,7 @@ describe('useKeyboardShortcuts Hook', () => {
     
     documentListeners.keydown(mockEvent);
     
-    expect(mockUndo).not.toHaveBeenCalled();
+    expect(mockState.undo).not.toHaveBeenCalled();
   });
   
   it('handles Ctrl+Z for undo', () => {
@@ -96,7 +80,7 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockUndo).toHaveBeenCalled();
+    expect(mockState.undo).toHaveBeenCalled();
   });
   
   it('handles Ctrl+Y for redo', () => {
@@ -112,7 +96,7 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockRedo).toHaveBeenCalled();
+    expect(mockState.redo).toHaveBeenCalled();
   });
   
   it('handles Ctrl+C for copy', () => {
@@ -128,7 +112,7 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockCopy).toHaveBeenCalled();
+    expect(mockState.copy).toHaveBeenCalled();
   });
   
   it('handles Ctrl+V for paste', () => {
@@ -144,7 +128,7 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockPaste).toHaveBeenCalled();
+    expect(mockState.paste).toHaveBeenCalled();
   });
   
   it('handles Delete for removing selected nodes', () => {
@@ -160,8 +144,8 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockRemoveNode).toHaveBeenCalledWith('node-1');
-    expect(mockRemoveNode).toHaveBeenCalledWith('node-2');
+    expect(mockState.removeNode).toHaveBeenCalledWith('node-1');
+    expect(mockState.removeNode).toHaveBeenCalledWith('node-2');
   });
   
   it('handles Ctrl+A for selecting all nodes', () => {
@@ -177,6 +161,6 @@ describe('useKeyboardShortcuts Hook', () => {
     documentListeners.keydown(mockEvent);
     
     expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(mockSelectNodes).toHaveBeenCalledWith(['node-1', 'node-2']);
+    expect(mockState.selectNodes).toHaveBeenCalledWith(['node-1', 'node-2']);
   });
 }); 

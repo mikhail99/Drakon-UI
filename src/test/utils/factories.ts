@@ -1,85 +1,67 @@
-import { Node, Edge, XYPosition } from 'reactflow';
+import { Node, Edge } from 'reactflow';
+import { NodeData, PortDefinition } from '../../types/node';
+import { EdgeData } from '../../types/graph';
 
-// Define mock types that would normally come from the app's type definitions
-// These would be imported from the actual types in the real implementation
-interface NodeData {
-  label: string;
-  type: string;
-  inputs: Array<PortData>;
-  outputs: Array<PortData>;
-  config: Record<string, any>;
-}
-
-interface EdgeData {
-  label?: string;
-}
-
-interface PortData {
-  id: string;
-  label: string;
-  type: PortType;
-}
-
-type PortType = 'number' | 'string' | 'boolean' | 'any';
-
-// Generate a random ID if needed
-function generateId(prefix = ''): string {
-  return `${prefix}${Math.random().toString(36).substring(2, 9)}`;
-}
-
-// Generate test node
-export const createMockNode = (overrides = {}): Node<NodeData> => ({
-  id: generateId('node-'),
-  type: 'default',
-  position: { x: 100, y: 100 },
-  data: {
-    label: 'Test Node',
+export function createMockNode(overrides: Partial<Node<NodeData>> = {}): Node<NodeData> {
+  const defaultNode: Node<NodeData> = {
+    id: 'test-node',
     type: 'default',
-    inputs: [],
-    outputs: [],
-    config: {},
-  },
-  ...overrides,
-});
+    position: { x: 0, y: 0 },
+    data: {
+      label: 'Test Node',
+      type: 'test',
+      inputs: [],
+      outputs: [],
+      config: {}
+    },
+    ...overrides
+  };
 
-// Generate test edge
-export const createMockEdge = (overrides = {}): Edge<EdgeData> => ({
-  id: generateId('edge-'),
-  source: 'source-node',
-  target: 'target-node',
-  sourceHandle: 'output-1',
-  targetHandle: 'input-1',
-  data: {
-    label: 'Test Connection',
-  },
-  ...overrides,
-});
+  return defaultNode;
+}
 
-// Generate test port
-export const createMockPort = (overrides = {}): PortData => ({
-  id: generateId('port-'),
-  label: 'Test Port',
-  type: 'any',
-  ...overrides,
-});
+export function createMockEdge(overrides: Partial<Edge<EdgeData>> = {}): Edge<EdgeData> {
+  const defaultEdge: Edge<EdgeData> = {
+    id: 'test-edge',
+    source: 'source-node',
+    target: 'target-node',
+    sourceHandle: 'source-port',
+    targetHandle: 'target-port',
+    data: {},
+    ...overrides
+  };
+
+  return defaultEdge;
+}
+
+export function createMockPort(overrides: Partial<PortDefinition> = {}): PortDefinition {
+  const defaultPort: PortDefinition = {
+    id: 'test-port',
+    label: 'Test Port',
+    type: 'number',
+    ...overrides
+  };
+
+  return defaultPort;
+}
 
 // Generate multiple test nodes in a grid layout
-export const generateNodes = (count: number): Node<NodeData>[] => 
-  Array.from({ length: count }, (_, i) => 
-    createMockNode({
-      id: `node-${i}`,
-      position: { x: i * 200, y: 100 },
-      data: {
-        label: `Node ${i}`,
-        type: i % 2 === 0 ? 'math' : 'input',
-        inputs: i > 0 ? [createMockPort({ id: `input-${i}` })] : [],
-        outputs: i < count - 1 ? [createMockPort({ id: `output-${i}` })] : []
-      }
-    }));
-  
+export function generateNodes(count: number): Node<NodeData>[] {
+  return Array.from({ length: count }, (_, i) => createMockNode({
+    id: `node-${i}`,
+    data: {
+      label: `Node ${i}`,
+      type: i % 2 === 0 ? 'math' : 'input',
+      inputs: [],
+      outputs: [],
+      config: {}
+    }
+  }));
+}
+
 // Generate connected edges between nodes
-export const generateEdges = (nodeCount: number): Edge<EdgeData>[] => 
-  Array.from({ length: nodeCount - 1 }, (_, i) => 
+export function generateEdges(nodeCount: number): Edge<EdgeData>[] {
+  return Array.from({ length: nodeCount - 1 }, (_, i) => 
     createMockEdge({
       id: `edge-${i}`,
       source: `node-${i}`,
@@ -88,9 +70,16 @@ export const generateEdges = (nodeCount: number): Edge<EdgeData>[] =>
       targetHandle: `in-${i+1}`,
     })
   );
+}
 
 // Generate a complete graph with nodes and connecting edges
-export const generateGraph = (nodeCount: number) => ({
-  nodes: generateNodes(nodeCount),
-  edges: generateEdges(nodeCount),
-}); 
+export function generateGraph(nodeCount: number, edgeCount: number): { nodes: Node<NodeData>[]; edges: Edge<EdgeData>[] } {
+  const nodes = generateNodes(nodeCount);
+  const edges = Array.from({ length: edgeCount }, (_, i) => createMockEdge({
+    id: `edge-${i}`,
+    source: `node-${i % nodeCount}`,
+    target: `node-${(i + 1) % nodeCount}`
+  }));
+
+  return { nodes, edges };
+} 

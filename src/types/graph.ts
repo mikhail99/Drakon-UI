@@ -1,7 +1,5 @@
 import { Node, Edge } from 'reactflow';
-import { CustomNode, NodeData } from './node';
-
-export type PortType = 'number' | 'string' | 'boolean' | 'any';
+import { CustomNode, NodeData, PortType } from './node';
 
 export interface Port {
   id: string;
@@ -32,7 +30,7 @@ export interface GraphState {
   clipboard: {
     nodes: Node<NodeData>[];
     edges: Edge<EdgeData>[];
-  };
+  } | null;
 }
 
 export interface GraphSnapshot {

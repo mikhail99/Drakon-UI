@@ -2,7 +2,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CommentNode from '../../components/nodes/CommentNode';
-import * as graphStoreModule from '../../store/graphStore';
 
 // Mock ReactFlow components 
 jest.mock('reactflow', () => ({
@@ -19,20 +18,13 @@ jest.mock('reactflow', () => ({
 }));
 
 // Mock the graph store
-jest.mock('../../store/graphStore', () => {
-  const updateNodeConfig = jest.fn();
-  return {
-    __esModule: true,
-    default: () => ({
-      updateNodeConfig
-    }),
-    // Add the mock function to the module exports so we can access it in tests
-    updateNodeConfigMock: updateNodeConfig
-  };
-});
+const updateNodeConfigMock = jest.fn();
 
-// Get access to the mocked function
-const updateNodeConfigMock = (graphStoreModule as any).updateNodeConfigMock;
+jest.mock('../../store/graphStore', () => ({
+  useGraphStore: () => ({
+    updateNodeConfig: updateNodeConfigMock
+  })
+}));
 
 describe('CommentNode Component', () => {
   const mockNode = {

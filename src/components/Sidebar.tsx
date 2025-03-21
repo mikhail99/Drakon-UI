@@ -1,7 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Divider,
+  InputAdornment,
+} from '@mui/material';
 import { 
-  Box, List, ListItem, ListItemText, Collapse, TextField,
-  IconButton, Tooltip, Typography, Divider, InputAdornment,
+  List, ListItem, ListItemText, Collapse, TextField,
   Paper
 } from '@mui/material';
 import {
@@ -12,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import { Node } from 'reactflow';
 import { NodeData, PortDefinition } from '../types/node';
-import useGraphStore from '../store/graphStore';
+import { useGraphStore } from '../store/graphStore';
 
 interface NodeType {
   type: string;
@@ -78,10 +84,10 @@ const nodeTypes: NodeType[] = [
     category: 'Process',
     inputs: [
       { id: 'condition', label: 'Condition', type: 'boolean' },
-      { id: 'true', label: 'If True', type: 'any' },
-      { id: 'false', label: 'If False', type: 'any' }
+      { id: 'true', label: 'If True', type: 'number' },
+      { id: 'false', label: 'If False', type: 'number' }
     ],
-    outputs: [{ id: 'result', label: 'Result', type: 'any' }]
+    outputs: [{ id: 'result', label: 'Result', type: 'number' }]
   },
   {
     type: 'numberOutput',
@@ -104,7 +110,15 @@ const nodeTypes: NodeType[] = [
     label: 'Visual Output',
     description: 'Displays a chart or visualization',
     category: 'Output',
-    inputs: [{ id: 'data', label: 'Data', type: 'any' }],
+    inputs: [{ id: 'data', label: 'Data', type: 'number' }],
+    outputs: []
+  },
+  {
+    type: 'comment',
+    label: 'Comment',
+    description: 'Add a comment or note to the graph',
+    category: 'Other',
+    inputs: [{ id: 'data', label: 'Data', type: 'number' }],
     outputs: []
   }
 ];

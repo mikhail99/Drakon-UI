@@ -1,6 +1,6 @@
 import { Node, Edge } from 'reactflow';
-import { EdgeData, Port } from '../../types/graph';
-import { NodeData } from '../../types/node';
+import { EdgeData } from '../../types/graph';
+import { NodeData, PortDefinition } from '../../types/node';
 
 export function createTestNode(overrides: Partial<Node<NodeData>> = {}): Node<NodeData> {
   const defaultNode: Node<NodeData> = {
@@ -20,8 +20,8 @@ export function createTestNode(overrides: Partial<Node<NodeData>> = {}): Node<No
   return defaultNode;
 }
 
-export function createTestPort(overrides: Partial<Port> = {}): Port {
-  const defaultPort: Port = {
+export function createTestPort(overrides: Partial<PortDefinition> = {}): PortDefinition {
+  const defaultPort: PortDefinition = {
     id: 'test-port',
     label: 'Test Port',
     type: 'number',

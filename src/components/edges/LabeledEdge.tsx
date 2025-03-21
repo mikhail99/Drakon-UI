@@ -1,75 +1,66 @@
-import React, { FC } from 'react';
-import { EdgeProps, EdgeLabelRenderer, getBezierPath } from 'reactflow';
-import { styled } from '@mui/material/styles';
+import { FC } from 'react';
+import { BaseEdge, EdgeProps, getBezierPath, Position } from 'reactflow';
+import { styled, useTheme } from '@mui/material/styles';
 
-// Styled components for the edge
-const EdgePath = styled('path')({
-  stroke: '#555',
-  strokeWidth: 1.5,
-  fill: 'none',
+const StyledEdge = styled(BaseEdge)(({ theme }) => ({
+  stroke: theme.palette.primary.main,
+  strokeWidth: 2,
   '&.selected': {
-    stroke: '#ff0072',
-    strokeWidth: 2,
+    stroke: theme.palette.primary.dark,
+    strokeWidth: 3,
   },
-});
+}));
 
-const LabelContainer = styled('div')({
+const EdgeLabel = styled('div')(({ theme }) => ({
   position: 'absolute',
   transform: 'translate(-50%, -50%)',
-  fontSize: 11,
-  pointerEvents: 'all',
-  padding: '2px 4px',
-  borderRadius: 4,
-  backgroundColor: 'rgba(255, 255, 255, 0.75)',
-  border: '1px solid #ccc',
-  userSelect: 'none',
-});
+  backgroundColor: theme.palette.background.paper,
+  padding: theme.spacing(0.5, 1),
+  borderRadius: theme.shape.borderRadius,
+  fontSize: theme.typography.caption.fontSize,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow: theme.shadows[1],
+}));
 
 const LabeledEdge: FC<EdgeProps> = ({
-  id,
-  source,
-  target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
   data,
   selected,
+  style,
   markerEnd,
 }) => {
-  // Calculate the edge path
+  const theme = useTheme();
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: 0,
+    sourceY: 0,
+    sourcePosition: Position.Bottom,
+    targetX: 0,
+    targetY: 0,
+    targetPosition: Position.Top,
+    curvature: 0.25,
   });
-
-  // Default to connection type if no label is provided
-  const edgeLabel = data?.label || 'connection';
 
   return (
     <>
-      <EdgePath
-        id={id}
-        d={edgePath}
+      <StyledEdge
+        path={edgePath}
         markerEnd={markerEnd}
-        className={selected ? 'selected' : ''}
+        style={{
+          ...style,
+          stroke: selected ? theme.palette.primary.dark : theme.palette.primary.main,
+          strokeWidth: selected ? 3 : 2,
+        }}
       />
-      <EdgeLabelRenderer>
-        <LabelContainer
+      {data?.label && (
+        <EdgeLabel
           style={{
             left: labelX,
             top: labelY,
+            transform: 'translate(-50%, -50%)',
           }}
         >
-          {edgeLabel}
-        </LabelContainer>
-      </EdgeLabelRenderer>
+          {data.label}
+        </EdgeLabel>
+      )}
     </>
   );
 };

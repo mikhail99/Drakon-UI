@@ -28,6 +28,9 @@ export interface NodeData {
   inputs: PortDefinition[];
   outputs: PortDefinition[];
   config: Record<string, any>;
+  hasError?: boolean;
+  errorMessage?: string;
+  description?: string;
 }
 
 export interface NodeProps extends Omit<ReactFlowNodeProps, 'data'> {

@@ -1,11 +1,8 @@
 import { create } from 'zustand';
-import { applyNodeChanges, applyEdgeChanges, Viewport, Node, Edge, NodeChange, EdgeChange, Connection, addEdge } from 'reactflow';
-import { CustomNode, NodeData } from '../types/node';
+import { applyNodeChanges, applyEdgeChanges, Viewport, Edge, NodeChange, EdgeChange, Connection, addEdge } from 'reactflow';
+import { CustomNode } from '../types/node';
 import { GraphState, GraphSnapshot, EdgeData } from '../types/graph';
 import { validateConnection } from '../utils/graphUtils';
-
-// Clipboard for copy/paste operations
-let clipboard: { nodes: CustomNode[]; edges: Edge[] } | null = null;
 
 const MAX_HISTORY_LENGTH = 50;
 
@@ -42,6 +39,9 @@ interface GraphStore extends GraphState {
   copy: () => void;
   paste: () => void;
   clear: () => void;
+  
+  // Clipboard state
+  clipboard: { nodes: CustomNode[]; edges: Edge[] } | null;
 }
 
 const initialViewport: Viewport = {
@@ -56,7 +56,7 @@ const createSnapshot = (state: GraphState): GraphSnapshot => ({
   selectedElements: state.selectedElements
 });
 
-const useGraphStore = create<GraphStore>((set, get) => ({
+export const useGraphStore = create<GraphStore>((set, get) => ({
   nodes: [],
   edges: [],
   viewport: initialViewport,
@@ -65,12 +65,11 @@ const useGraphStore = create<GraphStore>((set, get) => ({
     past: [],
     future: [],
   },
-  clipboard: { nodes: [], edges: [] },
+  clipboard: null,
 
   // Node actions
   onNodesChange: (changes) => {
     // Save current state to history before making changes
-    const { nodes, edges } = get();
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
       history: {
@@ -96,29 +95,19 @@ const useGraphStore = create<GraphStore>((set, get) => ({
 
   updateNodeConfig: (nodeId, config) => {
     set((state) => {
-      const nodeIndex = state.nodes.findIndex((n) => n.id === nodeId);
-      if (nodeIndex === -1) return state;
-
-      const updatedNodes = [...state.nodes];
-      updatedNodes[nodeIndex] = {
-        ...updatedNodes[nodeIndex],
-        data: {
-          ...updatedNodes[nodeIndex].data,
-          config: {
-            ...updatedNodes[nodeIndex].data.config,
-            ...config
-          }
+      const updatedNodes = state.nodes.map(node => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              config
+            }
+          };
         }
-      };
-
-      return {
-        ...state,
-        nodes: updatedNodes,
-        history: {
-          past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
-          future: []
-        }
-      };
+        return node;
+      });
+      return { nodes: updatedNodes };
     });
   },
 
@@ -149,7 +138,6 @@ const useGraphStore = create<GraphStore>((set, get) => ({
 
   // Edge actions
   onEdgesChange: (changes) => {
-    const { nodes, edges } = get();
     set((state) => ({
       edges: applyEdgeChanges(changes, state.edges),
       history: {
@@ -160,7 +148,6 @@ const useGraphStore = create<GraphStore>((set, get) => ({
   },
 
   onConnect: (connection) => {
-    const { nodes, edges } = get();
     // Could add validation here
     set((state) => ({
       edges: addEdge(connection, state.edges),
@@ -172,7 +159,6 @@ const useGraphStore = create<GraphStore>((set, get) => ({
   },
 
   updateEdge: (updatedEdge) => {
-    const { nodes, edges } = get();
     set((state) => ({
       edges: state.edges.map((edge) => {
         if (edge.id === updatedEdge.id) {
@@ -316,35 +302,39 @@ const useGraphStore = create<GraphStore>((set, get) => ({
 
   // Clipboard actions
   copySelectedElements: () => {
-    const { nodes, edges, selectedElements } = get();
-    
-    // Get the selected nodes
-    const selectedNodes = nodes.filter(node => 
-      selectedElements.nodes.includes(node.id)
-    );
-    
-    // Get the edges that connect only the selected nodes
-    const selectedEdges = edges.filter(edge => 
-      selectedElements.edges.includes(edge.id) || 
-      (selectedElements.nodes.includes(edge.source) && 
-       selectedElements.nodes.includes(edge.target))
-    );
-    
-    // Save to clipboard
-    clipboard = {
-      nodes: selectedNodes,
-      edges: selectedEdges,
-    };
+    set((state) => {
+      const { nodes, edges, selectedElements } = state;
+      
+      // Get the selected nodes
+      const selectedNodes = nodes.filter(node => 
+        selectedElements.nodes.includes(node.id)
+      );
+      
+      // Get the edges that connect only the selected nodes
+      const selectedEdges = edges.filter(edge => 
+        selectedElements.edges.includes(edge.id) || 
+        (selectedElements.nodes.includes(edge.source) && 
+         selectedElements.nodes.includes(edge.target))
+      );
+      
+      return {
+        ...state,
+        clipboard: {
+          nodes: selectedNodes,
+          edges: selectedEdges,
+        }
+      };
+    });
   },
   
   pasteElements: () => {
-    if (!clipboard) return;
+    const state = get();
+    if (!state.clipboard) return;
     
-    const { nodes, edges } = get();
     const idMap = new Map<string, string>();
     
     // Create new IDs for nodes
-    const newNodes = clipboard.nodes.map(node => {
+    const newNodes = state.clipboard.nodes.map((node: CustomNode) => {
       const newId = `node_${Math.random().toString(36).substr(2, 9)}`;
       idMap.set(node.id, newId);
       
@@ -358,65 +348,89 @@ const useGraphStore = create<GraphStore>((set, get) => ({
         ...node,
         id: newId,
         position,
-        selected: false,
+        selected: true,
       };
     });
     
-    // Create new edges with updated source/target
-    const newEdges = clipboard.edges
-      .filter(edge => idMap.has(edge.source) && idMap.has(edge.target))
-      .map(edge => ({
+    // Create new edges with updated node IDs
+    const newEdges = state.clipboard.edges.map((edge: Edge<EdgeData>) => {
+      const newId = `edge_${Math.random().toString(36).substr(2, 9)}`;
+      const newSource = idMap.get(edge.source) || edge.source;
+      const newTarget = idMap.get(edge.target) || edge.target;
+      
+      return {
         ...edge,
-        id: `edge_${Math.random().toString(36).substr(2, 9)}`,
-        source: idMap.get(edge.source) as string,
-        target: idMap.get(edge.target) as string,
-        selected: false,
-      }));
+        id: newId,
+        source: newSource,
+        target: newTarget,
+      };
+    });
     
-    // Add to graph
     set((state) => ({
+      ...state,
       nodes: [...state.nodes, ...newNodes],
       edges: [...state.edges, ...newEdges],
       history: {
         past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
         future: []
-      },
+      }
     }));
   },
 
   copy: () => {
-    set((state) => {
-      const selectedNodes = state.nodes.filter((node) =>
-        state.selectedElements.nodes.includes(node.id)
-      );
-
-      const selectedEdges = state.edges.filter(
-        (edge) =>
-          state.selectedElements.edges.includes(edge.id) &&
-          state.selectedElements.nodes.includes(edge.source) &&
-          state.selectedElements.nodes.includes(edge.target)
-      );
-
+    const state = get();
+    if (!state.clipboard) return;
+    if (state.clipboard.nodes.length === 0) return state;
+    
+    const idMap = new Map<string, string>();
+    
+    // Create new IDs for nodes
+    const newNodes = state.clipboard.nodes.map((node: CustomNode) => {
+      const newId = `node_${Math.random().toString(36).substr(2, 9)}`;
+      idMap.set(node.id, newId);
+      
+      // Add offset to position for better UX
+      const position = {
+        x: node.position.x + 50,
+        y: node.position.y + 50,
+      };
+      
       return {
-        ...state,
-        clipboard: {
-          nodes: selectedNodes.map((node) => ({
-            ...node,
-            id: `${node.id}-copy`
-          })),
-          edges: selectedEdges.map((edge) => ({
-            ...edge,
-            id: `${edge.id}-copy`,
-            source: `${edge.source}-copy`,
-            target: `${edge.target}-copy`
-          }))
-        }
+        ...node,
+        id: newId,
+        position,
+        selected: true,
       };
     });
+    
+    // Create new edges with updated node IDs
+    const newEdges = state.clipboard.edges.map((edge: Edge<EdgeData>) => {
+      const newId = `edge_${Math.random().toString(36).substr(2, 9)}`;
+      const newSource = idMap.get(edge.source) || edge.source;
+      const newTarget = idMap.get(edge.target) || edge.target;
+      
+      return {
+        ...edge,
+        id: newId,
+        source: newSource,
+        target: newTarget,
+      };
+    });
+    
+    set((state) => ({
+      ...state,
+      nodes: [...state.nodes, ...newNodes],
+      edges: [...state.edges, ...newEdges],
+      history: {
+        past: [...state.history.past, createSnapshot(state)].slice(-MAX_HISTORY_LENGTH),
+        future: []
+      }
+    }));
   },
 
   paste: () => {
     set((state) => {
+      if (!state.clipboard) return state;
       if (state.clipboard.nodes.length === 0) return state;
 
       const offsetX = 50;
@@ -450,14 +464,7 @@ const useGraphStore = create<GraphStore>((set, get) => ({
   clear: () => {
     set((state) => ({
       ...state,
-      nodes: [],
-      edges: [],
-      selectedElements: { nodes: [], edges: [] },
-      history: { past: [], future: [] },
-      viewport: { x: 0, y: 0, zoom: 1 },
-      clipboard: { nodes: [], edges: [] }
+      clipboard: null
     }));
   }
-}));
-
-export default useGraphStore; 
+})); 

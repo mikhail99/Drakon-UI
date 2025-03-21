@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 import { Paper, TextField, IconButton, Box } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
-import useGraphStore from '../../store/graphStore';
+import { useGraphStore } from '../../store/graphStore';
 import { NodeData } from '../../types/node';
 
 const CommentContainer = styled(Paper, {
@@ -53,14 +53,29 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
     setIsEditing(false);
   };
 
+  const handleCancel = () => {
+    setText(data.config?.text || 'Add comment here...');
+    setIsEditing(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
       handleSave();
+    } else if (e.key === 'Escape') {
+      handleCancel();
     }
   };
 
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
   return (
-    <CommentContainer color={data.config?.color} data-testid="comment-node">
+    <CommentContainer 
+      color={data.config?.backgroundColor} 
+      data-testid="comment-node"
+      onDoubleClick={handleDoubleClick}
+    >
       <StyledHandle
         type="source"
         position={Position.Right}
@@ -91,6 +106,7 @@ const CommentNode: React.FC<NodeProps<NodeData>> = ({ id, data }) => {
       ) : (
         <>
           <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {data.label && <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{data.label}</div>}
             {text}
           </Box>
           <ActionButton onClick={() => setIsEditing(true)} size="small" aria-label="Edit">

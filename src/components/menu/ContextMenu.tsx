@@ -11,9 +11,6 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
-import ContentCutIcon from '@mui/icons-material/ContentCut';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import SettingsIcon from '@mui/icons-material/Settings';
 
 const MenuContainer = styled(Paper)(({ theme }) => ({
   position: 'fixed',

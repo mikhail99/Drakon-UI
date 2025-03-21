@@ -7,10 +7,6 @@ import {
   TextField,
   Switch,
   Slider,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Divider,
   FormGroup,
   FormControlLabel,
@@ -18,8 +14,9 @@ import {
   IconButton,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { CustomNode } from '../../types/node';
-import useGraphStore from '../../store/graphStore';
+import { Node } from 'reactflow';
+import { CustomNode, NodeData } from '../../types/node';
+import { useGraphStore } from '../../store/graphStore';
 
 const ConfigContainer = styled(Paper)(({ theme }) => ({
   width: 280,
@@ -61,7 +58,7 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({ onClose }) => {
   // Get the selected node when selection changes
   useEffect(() => {
     if (selectedElements.nodes.length === 1) {
-      const node = nodes.find((n) => n.id === selectedElements.nodes[0]);
+      const node = nodes.find((n: Node<NodeData>) => n.id === selectedElements.nodes[0]);
       setSelectedNode(node || null);
       setConfigValues(node ? { ...node.data.config } : {});
     } else {

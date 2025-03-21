@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Handle, Position, Node, HandleType } from 'reactflow';
 import { NodeData } from '../types/node';
 import { Port } from '../types/graph';

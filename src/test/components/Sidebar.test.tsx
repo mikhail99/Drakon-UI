@@ -1,17 +1,16 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Sidebar } from '../../components/Sidebar';
-import useGraphStore from '../../store/graphStore';
-import { createTestNode } from '../utils/testUtils';
 
 // Mock the graph store
+const addNodeMock = jest.fn();
+const mockStore = {
+  addNode: addNodeMock,
+  nodes: []
+};
+
 jest.mock('../../store/graphStore', () => ({
-  __esModule: true,
-  default: {
-    getState: jest.fn(),
-    setState: jest.fn(),
-  },
+  useGraphStore: () => mockStore
 }));
 
 // Mock ReactFlow's drag functionality
@@ -25,12 +24,7 @@ describe('Sidebar Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
     jest.clearAllMocks();
-    
-    // Setup default mock values
-    (useGraphStore.getState as jest.Mock).mockReturnValue({
-      addNode: jest.fn(),
-      nodes: []
-    });
+    mockStore.nodes = [];
   });
 
   it('renders with node categories', () => {
@@ -77,12 +71,6 @@ describe('Sidebar Component', () => {
   });
 
   it('adds a node when double-clicked', async () => {
-    const addNodeMock = jest.fn();
-    (useGraphStore.getState as jest.Mock).mockReturnValue({
-      addNode: addNodeMock,
-      nodes: []
-    });
-    
     render(<Sidebar />);
     
     const inputCategory = screen.getByText(/Input/i);

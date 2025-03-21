@@ -1,5 +1,5 @@
 import { Node, Edge } from 'reactflow';
-import useGraphStore from '../../store/graphStore';
+import { useGraphStore } from '../../store/graphStore';
 import { EdgeData } from '../../types/graph';
 import { NodeData, CustomNode, PortDefinition } from '../../types/node';
 
@@ -424,13 +424,18 @@ describe('Graph Store', () => {
       copySelectedElements();
       
       // Verify clipboard has content
-      expect(useGraphStore.getState().clipboard.nodes).toHaveLength(1);
+      const clipboard = useGraphStore.getState().clipboard;
+      expect(clipboard).not.toBeNull();
+      if (clipboard) {
+        expect(clipboard.nodes).toHaveLength(1);
+      }
       
       // Clear clipboard
       clear();
       
       // Verify clipboard is empty
-      expect(useGraphStore.getState().clipboard.nodes).toHaveLength(0);
+      const clearedClipboard = useGraphStore.getState().clipboard;
+      expect(clearedClipboard).toBeNull();
     });
   });
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,13 +8,9 @@ import ReactFlow, {
   EdgeTypes,
   useReactFlow,
   OnSelectionChangeParams,
-  Viewport,
   OnMoveEnd,
   Node,
   Edge,
-  XYPosition,
-  useNodesState,
-  useEdgesState,
   MiniMap,
   MarkerType,
   Connection,
@@ -31,15 +27,16 @@ import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import CommentIcon from '@mui/icons-material/Comment';
 
-import useGraphStore from '../../store/graphStore';
-import { useCommonKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useGraphStore } from '../../store/graphStore';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodeWrapper from '../nodes/NodeWrapper';
 import NodePalette from '../palette/NodePalette';
 import NodeConfiguration from '../configuration/NodeConfiguration';
-import { NodeType, NodeData } from '../../types/node';
+import { NodeType, NodeData, PortDefinition } from '../../types/node';
 import LabeledEdge from '../edges/LabeledEdge';
 import ContextMenu, { ContextMenuPosition } from '../menu/ContextMenu';
 import CommentNode from '../nodes/CommentNode';
+import { EdgeData } from '../../types/graph';
 
 const GraphContainer = styled('div')({
   width: '100%',
@@ -65,19 +62,17 @@ const edgeTypes: EdgeTypes = {
 };
 
 // Connection validation function
-const isValidConnection = (connection: Connection) => {
-  // We'll implement real validation in the future
+const isValidConnection = () => {
   return true;
 };
 
 const GraphControls = () => {
   const { undo, redo, copySelectedElements, pasteElements } = useGraphStore();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const reactFlowInstance = useReactFlow();
 
   // Add a comment at the center of the viewport
   const addComment = () => {
-    const { nodes, viewport } = useGraphStore.getState();
+    const { viewport } = useGraphStore.getState();
     const id = `comment_${Math.random().toString(36).substr(2, 9)}`;
     
     // Calculate center position
@@ -173,14 +168,13 @@ const GraphEditorInner = () => {
     onNodesChange,
     onEdgesChange,
     onConnect,
-    setViewport,
-    setSelectedElements,
     addNode,
-    copySelectedElements,
-    pasteElements,
+    setSelectedElements,
+    setViewport,
+    selectedElements,
+    clipboard
   } = useGraphStore();
   const { screenToFlowPosition } = useReactFlow();
-  const clipboardRef = useRef<{ nodes: Node[], edges: Edge[] } | null>(null);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -192,34 +186,19 @@ const GraphEditorInner = () => {
   });
   
   // Detect if there's content in the clipboard
-  const [hasClipboardContent, setHasClipboardContent] = useState<boolean>(false);
-  
-  // Update clipboard status after copy operation
-  useEffect(() => {
-    // This is a simplified check - in a real app we'd need to handle this differently
-    // since we can't directly check the contents of the system clipboard for security reasons
-    const checkClipboard = () => {
-      // For now, assume clipboard has content if we've copied something
-      const clipboard = window as any;
-      setHasClipboardContent(!!clipboard.clipboardData || !!clipboardRef.current);
-    };
-    
-    checkClipboard();
-    window.addEventListener('copy', checkClipboard);
-    return () => {
-      window.removeEventListener('copy', checkClipboard);
-    };
-  }, []);
+  const hasClipboardContent = clipboard != null && 
+    ((clipboard.nodes != null && clipboard.nodes.length > 0) || 
+     (clipboard.edges != null && clipboard.edges.length > 0));
 
   // Use keyboard shortcuts
-  useCommonKeyboardShortcuts();
+  useKeyboardShortcuts();
 
   // Update selected elements when selection changes
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes, edges: selectedEdges }: OnSelectionChangeParams) => {
       setSelectedElements({
-        nodes: selectedNodes.map((node: Node) => node.id),
-        edges: selectedEdges.map((edge: Edge) => edge.id),
+        nodes: selectedNodes.map((node: Node<NodeData>) => node.id),
+        edges: selectedEdges.map((edge: Edge<EdgeData>) => edge.id),
       });
     },
     [setSelectedElements]
@@ -286,12 +265,12 @@ const GraphEditorInner = () => {
   const handleConnect = useCallback(
     (params: Connection) => {
       // Get source node and port details
-      const sourceNode = nodes.find(n => n.id === params.source);
-      const sourcePort = sourceNode?.data.outputs?.find(p => p.id === params.sourceHandle);
+      const sourceNode = nodes.find((n: Node<NodeData>) => n.id === params.source);
+      const sourcePort = sourceNode?.data.outputs?.find((p: PortDefinition) => p.id === params.sourceHandle);
       
       // Get target node and port details
-      const targetNode = nodes.find(n => n.id === params.target);
-      const targetPort = targetNode?.data.inputs?.find(p => p.id === params.targetHandle);
+      const targetNode = nodes.find((n: Node<NodeData>) => n.id === params.target);
+      const targetPort = targetNode?.data.inputs?.find((p: PortDefinition) => p.id === params.targetHandle);
       
       // Create label from port names
       const sourceName = sourcePort?.label || 'output';
@@ -339,7 +318,7 @@ const GraphEditorInner = () => {
     
     // Delete selected nodes
     if (selectedElements.nodes.length > 0) {
-      const nodeChanges = selectedElements.nodes.map(id => ({
+      const nodeChanges = selectedElements.nodes.map((id: string) => ({
         id,
         type: 'remove' as const,
       }));
@@ -348,13 +327,22 @@ const GraphEditorInner = () => {
     
     // Delete selected edges
     if (selectedElements.edges.length > 0) {
-      const edgeChanges = selectedElements.edges.map(id => ({
+      const edgeChanges = selectedElements.edges.map((id: string) => ({
         id,
         type: 'remove' as const,
       }));
       onEdgesChange(edgeChanges);
     }
   };
+
+  // Add a reference to the copy and paste handlers
+  const handleCopy = useCallback(() => {
+    useGraphStore().copySelectedElements();
+  }, []);
+
+  const handlePaste = useCallback(() => {
+    useGraphStore().pasteElements();
+  }, []);
 
   return (
     <GraphContainer 
@@ -408,11 +396,10 @@ const GraphEditorInner = () => {
           open={contextMenu.open}
           position={contextMenu.position}
           onClose={closeContextMenu}
-          onCopy={copySelectedElements}
-          onPaste={pasteElements}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
           onDelete={handleDelete}
-          hasSelection={useGraphStore.getState().selectedElements.nodes.length > 0 || 
-                       useGraphStore.getState().selectedElements.edges.length > 0}
+          hasSelection={selectedElements.nodes.length > 0 || selectedElements.edges.length > 0}
           hasClipboard={hasClipboardContent}
         />
       </FlowContainer>
