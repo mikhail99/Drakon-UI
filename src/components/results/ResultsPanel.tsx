@@ -97,6 +97,13 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ onClose }) => {
     }
   }, [selectedElements]);
   
+  // Switch to results tab when execution starts
+  useEffect(() => {
+    if (isExecuting || executionStatus !== 'idle') {
+      setTabIndex(1);
+    }
+  }, [isExecuting, executionStatus]);
+  
   // Get the selected node result
   const selectedNodeResult = selectedNodeId 
     ? results[selectedNodeId]
@@ -126,18 +133,16 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ onClose }) => {
               : 'Select a node to view its execution results'}
           </Typography>
           
-          {Object.keys(results).length === 0 && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<PlayArrowIcon />}
-              onClick={handleRunExecution}
-              sx={{ mt: 2 }}
-              disabled={isExecuting}
-            >
-              {isExecuting ? 'Running...' : 'Run Graph'}
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PlayArrowIcon />}
+            onClick={handleRunExecution}
+            sx={{ mt: 2 }}
+            disabled={isExecuting}
+          >
+            {isExecuting ? 'Running...' : 'Run Graph'}
+          </Button>
         </Box>
       );
     }
@@ -272,22 +277,16 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ onClose }) => {
                 : `Status: ${executionStatus.charAt(0).toUpperCase()}${executionStatus.slice(1)}`}
             </Typography>
             
-            <Tooltip title="Run graph">
-              <span>
-                <IconButton 
-                  size="small" 
-                  color="primary" 
-                  onClick={handleRunExecution}
-                  disabled={isExecuting}
-                >
-                  {isExecuting ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    <PlayArrowIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
+            <Button 
+              size="small" 
+              color="primary" 
+              onClick={handleRunExecution}
+              disabled={isExecuting}
+              variant="contained"
+              startIcon={isExecuting ? <CircularProgress size={16} /> : <PlayArrowIcon fontSize="small" />}
+            >
+              {isExecuting ? 'Running...' : 'Run Graph'}
+            </Button>
           </Box>
           
           <Divider sx={{ mb: 1 }} />

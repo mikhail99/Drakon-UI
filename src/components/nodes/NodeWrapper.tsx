@@ -72,6 +72,15 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ data, ...props }) => {
     }
   };
 
+  // Format the node title to include the label value if it exists
+  const getNodeTitle = () => {
+    // For input nodes or any node with a label config, show the label value in the title
+    if (data.config && data.config.label) {
+      return `${data.config.label} : ${data.label}`;
+    }
+    return data.label || 'Node';
+  };
+
   // Render the card content (input/output ports)
   const renderCardContent = () => (
     <CardContent sx={{ p: 1, pb: '8px !important', height: 'calc(100% - 40px)' }}>
@@ -118,7 +127,7 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ data, ...props }) => {
           title={
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="subtitle2" sx={{ fontSize: '0.875rem' }}>
-                {data.label || 'Node'}
+                {getNodeTitle()}
               </Typography>
               {renderStatusIcon()}
             </Box>
