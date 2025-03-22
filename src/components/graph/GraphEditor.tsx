@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css'; // Ensure styles are imported
 import { styled } from '@mui/material/styles';
 
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodePalette from '../palette/NodePalette';
+import NodeTreeView from '../nodes/NodeTreeView';
 import GraphErrorBoundary from '../error/GraphErrorBoundary';
 import GraphCanvas from './components/GraphCanvas';
 import GraphContextMenuHandler from './components/GraphContextMenuHandler';
 import TemplateSelectionDialog from '../dialogs/TemplateSelectionDialog';
 import NodeConfigurationDialog from '../configuration/NodeConfigurationDialog';
 import { useTemplateStore } from '../../store/templateStore';
+import { useGraphStore } from '../../store/graphStore';
+import { NodeType } from '../../types/node';
 
 // Main container for the graph editor
 const GraphContainer = styled('div')({
@@ -33,6 +36,7 @@ const CanvasContainer = styled('div')({
 const GraphEditorInner: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [configNodeId, setConfigNodeId] = useState<string | null>(null);
+  const { addNode, nodes, viewport } = useGraphStore();
 
   // Use keyboard shortcuts and get template dialog state
   const { showTemplateDialog, setShowTemplateDialog } = useKeyboardShortcuts();
@@ -67,6 +71,59 @@ const GraphEditorInner: React.FC = () => {
   const handleCloseConfigDialog = () => {
     setConfigNodeId(null);
   };
+  
+  // Handle adding a node from the tree view
+  const handleAddNode = (nodeType: NodeType) => {
+    if (!nodeType || !addNode) return;
+    
+    // Get current viewport state for positioning
+    const viewportX = viewport?.x ?? 0;
+    const viewportY = viewport?.y ?? 0;
+    const zoom = viewport?.zoom ?? 1;
+    
+    // Calculate position in the center of the viewport
+    const posX = -viewportX / zoom + window.innerWidth / 2 / zoom;
+    const posY = -viewportY / zoom + window.innerHeight / 2 / zoom;
+    
+    // Generate node ID with a consistent format
+    const nodeId = `${nodeType.id}-${Math.floor(Math.random() * 10000)}`;
+    
+    // Create the node data with "AAA" placeholder
+    const nodeData = { 
+      label: "AAA", // Use "AAA" as placeholder until user configures the node
+      type: nodeType.id,
+      inputs: nodeType.inputs || [],
+      outputs: nodeType.outputs || [],
+      config: { 
+        ...nodeType.defaultConfig || {},
+        // Add original type information for reference in configuration dialog
+        originalType: nodeType.id,
+        originalLabel: nodeType.label
+      },
+    };
+    
+    console.log('Creating new node with label:', nodeData.label);
+    
+    // Create and add the node with a placeholder label
+    addNode({
+      id: nodeId,
+      type: 'default', // Use default type or specified type
+      position: { x: posX, y: posY },
+      data: nodeData
+    });
+    
+    // Automatically open the configuration dialog for the new node
+    setConfigNodeId(nodeId);
+  };
+  
+  // Handle configuring a node from the tree view
+  const handleConfigureNode = (nodeId: string) => {
+    // Find the node in the current nodes array
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      setConfigNodeId(node.id);
+    }
+  };
 
   return (
     <GraphContainer data-testid="graph-container">
@@ -81,6 +138,10 @@ const GraphEditorInner: React.FC = () => {
           </GraphContextMenuHandler>
         </GraphErrorBoundary>
       </CanvasContainer>
+      <NodeTreeView 
+        onAddNode={handleAddNode} 
+        onConfigureNode={handleConfigureNode}
+      />
       
       {/* Template Selection Dialog */}
       <TemplateSelectionDialog

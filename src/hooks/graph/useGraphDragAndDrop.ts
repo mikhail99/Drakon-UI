@@ -57,11 +57,15 @@ function useGraphDragAndDrop() {
             type: 'default',
             position,
             data: {
-              label: nodeType.label || 'New Node',
+              label: "AAA",
               type: nodeType.id || 'default',
               inputs: Array.isArray(nodeType.inputs) ? nodeType.inputs : [],
               outputs: Array.isArray(nodeType.outputs) ? nodeType.outputs : [],
-              config: { ...(nodeType.defaultConfig || {}) },
+              config: { 
+                ...(nodeType.defaultConfig || {}),
+                originalType: nodeType.id,
+                originalLabel: nodeType.label 
+              },
             },
           };
           

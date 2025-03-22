@@ -1,18 +1,8 @@
 # Drakon UI Refactoring Plan
+There are still some type issues in the Sidebar component related to the PortType enum which would need additional work, but we've made significant progress in the migration from nodeType to type.
 
-## Overview
+## Phase 1: Foundation Improvements 
 
-This document outlines a prioritized plan for refactoring the Drakon UI codebase, based on the analyses of component architecture, state management, and code quality. The plan is structured into phases with tasks prioritized by:
-
-1. **Impact on Maintainability**: How much the change will improve code clarity, reduce complexity, and facilitate future development
-2. **Effort Required**: The estimated time and complexity to implement the change
-3. **Risk of Regression**: The potential for introducing bugs or breaking existing functionality
-
-Each task is assigned a priority score (High/Medium/Low) for each of these dimensions, and an overall priority based on the combination of these factors.
-
-## Phase 1: Foundation Improvements (2 weeks)
-
-These tasks provide the highest value-to-effort ratio and establish a stronger foundation for subsequent refactoring work.
 
 ### 1.1 Split Graph Store into Domain-Specific Stores
 
@@ -62,9 +52,8 @@ These tasks provide the highest value-to-effort ratio and establish a stronger f
 
 **Overall Priority**: **High**
 
-## Phase 2: Component Refinement (3 weeks)
+## Phase 2: Component Refinement 
 
-These tasks focus on improving component structure and reducing complexity in the most critical parts of the application.
 
 ### 2.1 Refactor GraphEditor Component
 
@@ -81,6 +70,15 @@ These tasks focus on improving component structure and reducing complexity in th
 - Risk of Regression: **High** - Central to application functionality
 
 **Overall Priority**: **High** (requires careful planning and testing)
+
+
+
+
+
+
+
+
+
 
 ### 2.2 Extract Common UI Patterns into Reusable Hooks
 
@@ -114,7 +112,7 @@ These tasks focus on improving component structure and reducing complexity in th
 
 **Overall Priority**: **Medium**
 
-## Phase 3: State Management Optimization (2 weeks)
+## Phase 3: State Management Optimization 
 
 These tasks focus on improving state management efficiency and patterns.
 
@@ -226,43 +224,4 @@ These tasks focus on improving type definitions and overall code quality.
 2. **Visual Regression Tests**: Implement visual testing for UI components
 3. **Performance Benchmarks**: Establish baselines and compare before/after
 
-### Phased Rollout
 
-1. **Foundation First**: Complete Phase 1 to establish better patterns
-2. **Incremental Changes**: Implement changes in small, testable increments
-3. **Regular Integration**: Merge changes frequently to catch integration issues early
-
-### Success Metrics
-
-1. **Code Quality Metrics**:
-   - Reduced component complexity (measured by cyclomatic complexity)
-   - Improved type coverage (fewer any types)
-   - Reduced duplication (measured by static analysis)
-
-2. **Performance Metrics**:
-   - Render times for large graphs
-   - Memory usage patterns
-   - Interaction responsiveness
-
-3. **Developer Experience**:
-   - Time to implement new features
-   - Bug rate in refactored vs. non-refactored areas
-
-## Timeline and Resource Allocation
-
-### Timeline
-
-- **Phase 1**: Weeks 1-2
-- **Phase 2**: Weeks 3-5
-- **Phase 3**: Weeks 6-7
-- **Phase 4**: Weeks 8-10
-
-### Resource Allocation
-
-- Dedicate at least 20% of development time to refactoring
-- Pair programming for high-risk refactoring tasks
-- Regular code reviews with focus on adherence to new patterns
-
-## Conclusion
-
-This refactoring plan prioritizes improvements that provide the greatest benefit for maintainability while balancing effort and risk. By focusing first on structural improvements and patterns, we lay the groundwork for more specific optimizations later. The phased approach ensures that the application remains stable throughout the process while steadily improving in quality and maintainability.

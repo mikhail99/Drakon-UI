@@ -118,11 +118,16 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             type: 'default',
             position,
             data: {
-              label: nodeType.label,
+              label: "AAA", // Use "AAA" as placeholder until user configures the node
               type: nodeType.id,
               inputs: nodeType.inputs || [],
               outputs: nodeType.outputs || [],
-              config: { ...(nodeType.defaultConfig || {}) },
+              config: { 
+                ...(nodeType.defaultConfig || {}),
+                // Add original type information for reference in configuration dialog
+                originalType: nodeType.id,
+                originalLabel: nodeType.label 
+              },
             },
           };
           

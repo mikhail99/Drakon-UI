@@ -51,10 +51,31 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
 
   addNode: (node) => {
     set((state) => {
-      const updatedNodes = [...state.nodes, node];
+      console.log('Adding node with initial data:', {
+        id: node.id,
+        label: node.data.label,
+        type: node.data.type
+      });
+      
+      // Ensure the node keeps its original label
+      const nodeWithPreservedLabel = {
+        ...node,
+        data: {
+          ...node.data,
+          // Explicitly preserve the label, especially if it's "AAA"
+          label: node.data.label
+        }
+      };
+      
+      console.log('Node after preservation:', {
+        id: nodeWithPreservedLabel.id, 
+        label: nodeWithPreservedLabel.data.label
+      });
+      
+      const updatedNodes = [...state.nodes, nodeWithPreservedLabel];
       
       // Emit node added event
-      graphEvents.emit(GRAPH_EVENTS.NODE_ADDED, node);
+      graphEvents.emit(GRAPH_EVENTS.NODE_ADDED, nodeWithPreservedLabel);
       graphEvents.emit(GRAPH_EVENTS.GRAPH_CHANGED, updatedNodes, state.edges);
       
       return {
@@ -67,13 +88,25 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
     set((state) => {
       const updatedNodes = state.nodes.map(node => {
         if (node.id === nodeId) {
+          console.log('Updating node config:', nodeId);
+          console.log('Current node data:', node.data);
+          console.log('New config to apply:', config);
+          
+          // Create updated node with new config
           const updatedNode = {
             ...node,
             data: {
               ...node.data,
-              config
+              // If label is provided in config, update the main label
+              ...(config.label ? { label: config.label } : {}),
+              config: {
+                ...node.data.config,
+                ...config
+              }
             }
           };
+          
+          console.log('Updated node data:', updatedNode.data);
           
           // Emit node updated event
           graphEvents.emit(GRAPH_EVENTS.NODE_UPDATED, updatedNode);

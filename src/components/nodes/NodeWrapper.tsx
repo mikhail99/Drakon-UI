@@ -74,11 +74,14 @@ const NodeWrapper: React.FC<NodeProps<NodeData>> = ({ data, ...props }) => {
 
   // Format the node title to include the label value if it exists
   const getNodeTitle = () => {
-    // For input nodes or any node with a label config, show the label value in the title
-    if (data.config && data.config.label) {
-      return `${data.config.label} : ${data.label}`;
-    }
-    return data.label || 'Node';
+    console.log('Node data for title:', {
+      id: props.id,
+      label: data.label,
+      configLabel: data.config?.label,
+      type: data.type
+    });
+        
+    return data.label + " ::: " + data.type;
   };
 
   // Render the card content (input/output ports)

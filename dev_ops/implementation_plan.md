@@ -140,20 +140,19 @@
 
 ### 6.2 Unit Tests
 
-#### Currently Implemented Tests
-
 - **Hook Tests**:
-  - `useLocalStorage` - Tests for storage operations, error handling, and synchronization
-  - `useKeyboardShortcuts` - Tests for keyboard event handling and state updates
+  - ✅ `useLocalStorage` - Tests for storage operations, error handling, and synchronization
+  - ✅ `useKeyboardShortcuts` - Tests for keyboard event handling and state updates
+  - `useGraphOperations` for graph manipulation utilities
+  - `useZoom` for testing zoom behavior
+  - Graph utility functions for connection validation
 
 - **Component Tests**:
-  - `NavigationBar` - Tests for UI rendering, button states, and file operations
-  - `GraphEditor` - Tests for viewport changes, node/edge selection, and drop events
-  - `CommentNode` - Tests for text editing, color changing, and resize operations
-  - `NodeWrapper` - Tests for rendering, port configuration, and error handling
-  - `Sidebar` - Tests for category management, node filtering, and drag operations
-
-#### Future Test Coverage
+  - ✅ `NavigationBar` - Tests for UI rendering, button states, and file operations
+  - ✅ `GraphEditor` - Tests for viewport changes, node/edge selection, and drop events
+  - ✅ `CommentNode` - Tests for text editing, color changing, and resize operations
+  - ✅ `NodeWrapper` - Tests for rendering, port configuration, and error handling
+  - ✅ `Sidebar` - Tests for category management, node filtering, and drag operations
 
 - **Core Components**:
   - `Port` component for testing connection points
@@ -161,21 +160,11 @@
   - Custom node type components (mathematical, logical, etc.)
   - `ContextMenu` for testing right-click operations
 
-- **Hooks and Utilities**:
-  - `useGraphOperations` for graph manipulation utilities
-  - `useZoom` for testing zoom behavior
-  - Graph utility functions for connection validation
-
 - **Store Tests**:
   - GraphStore state management
   - History operations (undo/redo)
   - Selection state management
   - Node and edge CRUD operations
-
-- **Performance Tests**:
-  - Component rendering speed
-  - State update performance
-  - Large graph handling
 
 #### Testing Patterns
 

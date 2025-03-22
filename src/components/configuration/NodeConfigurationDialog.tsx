@@ -76,7 +76,25 @@ const NodeConfigurationDialog: React.FC<NodeConfigurationDialogProps> = ({
     if (nodeId) {
       const node = nodes.find((n: Node<NodeData>) => n.id === nodeId);
       setSelectedNode(node || null);
-      setConfigValues(node ? { ...node.data.config } : {});
+      
+      // Create initial config values
+      if (node) {
+        console.log('Node selected for configuration:', node.id, 'with label:', node.data.label);
+        
+        // If this is a new node with a default label, make sure we show "AAA" in the config field
+        if (node.data.label === "AAA") {
+          console.log('This is a new node with AAA label');
+          setConfigValues({ 
+            ...node.data.config,
+            label: "AAA" // Force "AAA" in the label field 
+          });
+        } else {
+          // For existing nodes, use their current config
+          setConfigValues({ ...node.data.config });
+        }
+      } else {
+        setConfigValues({});
+      }
     } else {
       setSelectedNode(null);
       setConfigValues({});
@@ -99,6 +117,10 @@ const NodeConfigurationDialog: React.FC<NodeConfigurationDialogProps> = ({
   // Apply changes to the node and close the dialog
   const handleApply = () => {
     if (selectedNode) {
+      console.log('Applying config changes:', configValues);
+      console.log('For node with current label:', selectedNode.data.label);
+      
+      // Update the node with the user's changes
       updateNodeConfig(selectedNode.id, configValues);
     }
     onClose();
@@ -274,9 +296,10 @@ const NodeConfigurationDialog: React.FC<NodeConfigurationDialogProps> = ({
                 <TextField
                   fullWidth
                   label="Label"
-                  value={configValues.label || selectedNode.data.label}
+                  value={configValues.label !== undefined ? configValues.label : selectedNode.data.label}
                   onChange={(e) => handleConfigChange('label', e.target.value)}
                   size="small"
+                  helperText={selectedNode.data.label === "AAA" ? "This is a new node. Please set a label." : undefined}
                 />
               </Box>
 
