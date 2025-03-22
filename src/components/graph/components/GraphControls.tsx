@@ -11,6 +11,7 @@ import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import CommentIcon from '@mui/icons-material/Comment';
 
 import { useGraphStore } from '../../../store/graphStore';
+import { useNodeOrganizationStore } from '../../../store/nodeOrganizationStore';
 
 /**
  * GraphControls - Control buttons for the graph editor
@@ -20,21 +21,17 @@ const GraphControls: React.FC = () => {
   const { undo, redo, copySelectedElements, pasteElements } = useGraphStore();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
 
-  // Add a comment at the center of the viewport
+  // Add a comment node
   const addComment = () => {
-    const { viewport } = useGraphStore.getState();
-    const id = `comment_${Math.random().toString(36).substr(2, 9)}`;
+    const reactFlowInstance = useReactFlow();
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
     
-    // Calculate center position
-    const position = {
-      x: (-viewport.x + window.innerWidth / 2) / viewport.zoom - 75, // Center x, adjusting for node width
-      y: (-viewport.y + window.innerHeight / 2) / viewport.zoom - 30, // Center y, adjusting for node height
-    };
-    
-    // Create comment node with proper NodeData structure
+    // Create a comment node
     const commentNode = {
-      id,
-      type: 'comment',
+      id: `comment-${Date.now()}`,
       position,
       data: {
         label: 'Comment',
@@ -44,9 +41,14 @@ const GraphControls: React.FC = () => {
         config: { text: 'Add note here...' }
       },
       selected: true,
+      type: 'comment'
     };
     
+    // Add the node to the graph
     useGraphStore.getState().addNode(commentNode);
+    
+    // Add the comment node to the default folder
+    useNodeOrganizationStore.getState().addNodeToFolder(commentNode.id, 'default');
   };
 
   return (

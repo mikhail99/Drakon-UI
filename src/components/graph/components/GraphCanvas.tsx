@@ -23,6 +23,7 @@ import { useTheme } from '@mui/material/styles';
 import GraphControls from './GraphControls';
 import GraphMiniMap from './GraphMiniMap';
 import { useGraphStore } from '../../../store/graphStore';
+import { useNodeOrganizationStore } from '../../../store/nodeOrganizationStore';
 import useGraphSelection from '../../../hooks/graph/useGraphSelection';
 import useGraphConnections from '../../../hooks/graph/useGraphConnections';
 import useGraphViewport from '../../../hooks/graph/useGraphViewport';

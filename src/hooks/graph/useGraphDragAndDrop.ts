@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useReactFlow } from 'reactflow';
 import { useGraphStore } from '../../store/graphStore';
+import { useNodeOrganizationStore } from '../../store/nodeOrganizationStore';
 import { NodeType } from '../../types/node';
 import { createNewNode } from '../../utils/nodeUtils';
 
@@ -16,6 +17,7 @@ interface DragItem {
  */
 function useGraphDragAndDrop() {
   const { addNode } = useGraphStore();
+  const { addNodeToFolder } = useNodeOrganizationStore();
   const reactFlowInstance = useReactFlow();
   
   // Handle drop event from palette
@@ -56,6 +58,9 @@ function useGraphDragAndDrop() {
           
           addNode(newNode);
           
+          // Add the node to the default folder
+          addNodeToFolder(newNode.id, 'default');
+          
         } catch (parseError) {
           console.error('Failed to parse drag data:', parseError, jsonData);
         }
@@ -63,7 +68,7 @@ function useGraphDragAndDrop() {
         console.error('Error during node drop:', error);
       }
     },
-    [addNode, reactFlowInstance]
+    [addNode, addNodeToFolder, reactFlowInstance]
   );
 
   // Simple function to enable drop by preventing default behavior

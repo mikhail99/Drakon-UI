@@ -37,4 +37,24 @@ export interface NodeProps extends Omit<ReactFlowNodeProps, 'data'> {
   data: NodeData;
 }
 
-export type CustomNode = Node<NodeData>; 
+export type CustomNode = Node<NodeData>;
+
+/**
+ * NodeFolder represents a folder for organizing nodes in the NodeTreeView
+ */
+export interface NodeFolder {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  // Nodes contained in this folder (reference to node IDs)
+  nodeIds: string[];
+}
+
+/**
+ * NodeOrganization handles the overall folder structure for nodes
+ */
+export interface NodeOrganization {
+  folders: Record<string, NodeFolder>;
+  // Node ID to folder ID mapping
+  nodeToFolder: Record<string, string>;
+} 

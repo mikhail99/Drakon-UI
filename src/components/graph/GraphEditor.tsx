@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css'; // Ensure styles are imported
 import { styled } from '@mui/material/styles';
+import { Box } from '@mui/material';
 
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import NodePalette from '../palette/NodePalette';
@@ -13,6 +14,7 @@ import TemplateSelectionDialog from '../dialogs/TemplateSelectionDialog';
 import NodeConfigurationDialog from '../configuration/NodeConfigurationDialog';
 import { useTemplateStore } from '../../store/templateStore';
 import { useGraphStore } from '../../store/graphStore';
+import { useNodeOrganizationStore } from '../../store/nodeOrganizationStore';
 import { NodeType } from '../../types/node';
 import { createNewNode } from '../../utils/nodeUtils';
 
@@ -38,13 +40,12 @@ const GraphEditorInner: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [configNodeId, setConfigNodeId] = useState<string | null>(null);
   const { addNode, nodes, viewport } = useGraphStore();
+  const { setActiveTemplate } = useTemplateStore();
+  const { addNodeToFolder } = useNodeOrganizationStore();
 
   // Use keyboard shortcuts and get template dialog state
   const { showTemplateDialog, setShowTemplateDialog } = useKeyboardShortcuts();
   
-  // Use template store for setting the active template
-  const { setActiveTemplate } = useTemplateStore();
-
   // This function will be passed to both the canvas and the context menu handler
   const handleContextMenu = (event: React.MouseEvent) => {
     // Prevent default browser context menu
@@ -92,6 +93,9 @@ const GraphEditorInner: React.FC = () => {
     
     // Add the node to the graph
     addNode(newNode);
+    
+    // Add the node to the default folder
+    addNodeToFolder(newNode.id, 'default');
     
     // Automatically open the configuration dialog for the new node
     setConfigNodeId(newNode.id);
