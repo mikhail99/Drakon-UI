@@ -1,11 +1,10 @@
 import { useCallback } from 'react';
-import { useReactFlow, Node } from 'reactflow';
+import { useReactFlow } from 'reactflow';
 import { useGraphStore } from '../../store/graphStore';
-import { NodeType, NodeData } from '../../types/node';
+import { NodeType } from '../../types/node';
+import { createNewNode } from '../../utils/nodeUtils';
 
-// Generate a unique node ID
-const getId = (): string => `node_${Math.random().toString(36).substr(2, 9)}`;
-
+// Interface for the drag data
 interface DragItem {
   type: string;
   nodeType: NodeType;
@@ -51,25 +50,10 @@ function useGraphDragAndDrop() {
           
           const nodeType = dragData.nodeType;
           
-          // Create a new node
-          const newNode = {
-            id: getId(),
-            type: 'default',
-            position,
-            data: {
-              label: "AAA",
-              type: nodeType.id || 'default',
-              inputs: Array.isArray(nodeType.inputs) ? nodeType.inputs : [],
-              outputs: Array.isArray(nodeType.outputs) ? nodeType.outputs : [],
-              config: { 
-                ...(nodeType.defaultConfig || {}),
-                originalType: nodeType.id,
-                originalLabel: nodeType.label 
-              },
-            },
-          };
+          // Use the centralized node creation function
+          const newNode = createNewNode(nodeType, position);
+          console.log('Adding node from drag:', newNode);
           
-          console.log('Adding node:', newNode);
           addNode(newNode);
           
         } catch (parseError) {

@@ -62,7 +62,6 @@ export const useGraphElementsStore = create<GraphElementsStore>((set, get) => ({
         ...node,
         data: {
           ...node.data,
-          // Explicitly preserve the label, especially if it's "AAA"
           label: node.data.label
         }
       };

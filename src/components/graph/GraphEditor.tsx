@@ -14,6 +14,7 @@ import NodeConfigurationDialog from '../configuration/NodeConfigurationDialog';
 import { useTemplateStore } from '../../store/templateStore';
 import { useGraphStore } from '../../store/graphStore';
 import { NodeType } from '../../types/node';
+import { createNewNode } from '../../utils/nodeUtils';
 
 // Main container for the graph editor
 const GraphContainer = styled('div')({
@@ -85,35 +86,15 @@ const GraphEditorInner: React.FC = () => {
     const posX = -viewportX / zoom + window.innerWidth / 2 / zoom;
     const posY = -viewportY / zoom + window.innerHeight / 2 / zoom;
     
-    // Generate node ID with a consistent format
-    const nodeId = `${nodeType.id}-${Math.floor(Math.random() * 10000)}`;
+    // Use the centralized node creation function
+    const newNode = createNewNode(nodeType, { x: posX, y: posY });
+    console.log('Creating new node:', newNode);
     
-    // Create the node data with "AAA" placeholder
-    const nodeData = { 
-      label: "AAA", // Use "AAA" as placeholder until user configures the node
-      type: nodeType.id,
-      inputs: nodeType.inputs || [],
-      outputs: nodeType.outputs || [],
-      config: { 
-        ...nodeType.defaultConfig || {},
-        // Add original type information for reference in configuration dialog
-        originalType: nodeType.id,
-        originalLabel: nodeType.label
-      },
-    };
-    
-    console.log('Creating new node with label:', nodeData.label);
-    
-    // Create and add the node with a placeholder label
-    addNode({
-      id: nodeId,
-      type: 'default', // Use default type or specified type
-      position: { x: posX, y: posY },
-      data: nodeData
-    });
+    // Add the node to the graph
+    addNode(newNode);
     
     // Automatically open the configuration dialog for the new node
-    setConfigNodeId(nodeId);
+    setConfigNodeId(newNode.id);
   };
   
   // Handle configuring a node from the tree view
