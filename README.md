@@ -1,1 +1,1 @@
-his is frontend UI part for Drakon app, inspired by ComfyUI's drag-and-drop-based interface for computations.
+This is frontend UI part for Drakon app, inspired by ComfyUI's drag-and-drop-based interface for computations.
